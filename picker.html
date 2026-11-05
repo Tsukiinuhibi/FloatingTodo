@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>螢幕滴管</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;cursor:none;user-select:none}
+  #shot{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  #tip{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(20,22,26,.88);color:#fff;
+    font:14px "Microsoft JhengHei UI",sans-serif;padding:8px 16px;border-radius:20px;pointer-events:none}
+  #lens{position:fixed;width:130px;height:130px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px #000,0 6px 20px rgba(0,0,0,.5);
+    overflow:hidden;pointer-events:none;image-rendering:pixelated}
+  #lens canvas{width:100%;height:100%;image-rendering:pixelated}
+  #lens::after{content:"";position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border:1px solid #fff;outline:1px solid #000}
+  #label{position:fixed;background:rgba(20,22,26,.9);color:#fff;font:12px Consolas,monospace;padding:4px 8px;border-radius:6px;pointer-events:none;display:flex;gap:6px;align-items:center}
+  #label i{width:14px;height:14px;border-radius:3px;border:1px solid #fff}
+</style>
+</head>
+<body>
+<canvas id="shot"></canvas>
+<div id="tip">移動滑鼠到想要的顏色，點一下取色・按 Esc 或右鍵取消</div>
+<div id="lens"><canvas id="zoom" width="13" height="13"></canvas></div>
+<div id="label"><i id="sw"></i><span id="hex"></span></div>
+<script>
+  const shot = document.getElementById('shot'), sctx = shot.getContext('2d', { willReadFrequently: true });
+  const zoom = document.getElementById('zoom'), zctx = zoom.getContext('2d');
+  zctx.imageSmoothingEnabled = false;
+  let ready = false, cur = null;
+  const hex = (r, g, b) => '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+
+  window.picker.onImage(src => {
+    const img = new Image();
+    img.onload = () => { shot.width = img.width; shot.height = img.height; sctx.drawImage(img, 0, 0); ready = true; };
+    img.src = src;
+  });
+
+  addEventListener('mousemove', e => {
+    if (!ready) return;
+    const sx = shot.width / innerWidth, sy = shot.height / innerHeight;
+    const px = Math.floor(e.clientX * sx), py = Math.floor(e.clientY * sy);
+    zctx.clearRect(0, 0, 13, 13);
+    zctx.drawImage(shot, px - 6, py - 6, 13, 13, 0, 0, 13, 13);
+    const [r, g, b] = sctx.getImageData(px, py, 1, 1).data;
+    cur = hex(r, g, b);
+    const lens = document.getElementById('lens'), lab = document.getElementById('label');
+    const fx = e.clientX + 150 > innerWidth ? -150 : 20, fy = e.clientY + 180 > innerHeight ? -180 : 20;
+    lens.style.left = (e.clientX + fx) + 'px'; lens.style.top = (e.clientY + fy) + 'px';
+    lab.style.left = (e.clientX + fx + 10) + 'px'; lab.style.top = (e.clientY + fy + 138) + 'px';
+    document.getElementById('sw').style.background = cur;
+    document.getElementById('hex').textContent = `${cur.toUpperCase()}  RGB(${r}, ${g}, ${b})`;
+  });
+  addEventListener('mousedown', e => {
+    if (e.button === 2) return window.picker.done(null);
+    if (e.button === 0 && cur) window.picker.done(cur);
+  });
+  addEventListener('contextmenu', e => e.preventDefault());
+  addEventListener('keydown', e => { if (e.key === 'Escape') window.picker.done(null); });
+</script>
+</body>
+</html>

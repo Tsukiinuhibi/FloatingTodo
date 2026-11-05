@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>桌面代辦</title>
+<style>
+  :root{
+    --bg:#f7f5f0; --card:#ffffff; --bar:#2a2d33; --bar-ink:#f3f1ec;
+    --ink:#22252a; --muted:#7b7f87; --accent:#e0531f; --ok:#2f9e6a;
+    --warn:#d9480f; --soon:#c98a00; --radius:10px;
+  }
+  /* 衍生色：跟著各自區塊的主色計算（預覽視窗才能獨立變色） */
+  .app,.pv{
+    --line:color-mix(in srgb,var(--ink) 13%,var(--card));
+    --soft:color-mix(in srgb,var(--ink) 5%,var(--card));
+    --seg:color-mix(in srgb,var(--ink) 8%,var(--bg));
+    --accent-soft:color-mix(in srgb,var(--accent) 16%,var(--card));
+    --warn-soft:color-mix(in srgb,var(--warn) 16%,var(--card));
+    --soon-soft:color-mix(in srgb,var(--soon) 18%,var(--card));
+    --bar-dim:color-mix(in srgb,var(--bar-ink) 70%,var(--bar));
+    background:var(--bg);color:var(--ink);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:"Microsoft JhengHei UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;font-size:14px}
+  body.browser{display:flex;justify-content:center;align-items:flex-start;padding:16px;background:#d9d5cc}
+  body.browser .app{width:380px;height:720px;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .app{position:relative;display:flex;flex-direction:column;height:100%;overflow:hidden;border:1px solid var(--line)}
+  button{font:inherit;color:inherit;cursor:pointer}
+  input,select{font:inherit;color:inherit}
+  .hidden{display:none !important}
+
+  /* 標題列 */
+  .titlebar{display:flex;align-items:center;gap:2px;height:36px;padding:0 4px 0 2px;background:var(--bar);color:var(--bar-ink);
+    -webkit-app-region:drag;user-select:none;flex-shrink:0}
+  .titlebar button{-webkit-app-region:no-drag}
+  .titlebar .title{font-weight:600;font-size:13px;letter-spacing:.5px;margin-left:2px}
+  .spacer{flex:1}
+  .icon{display:grid;place-items:center;width:30px;height:28px;border:0;background:transparent;border-radius:6px;color:var(--bar-dim)}
+  .icon:hover{background:color-mix(in srgb,var(--bar-ink) 14%,transparent);color:var(--bar-ink)}
+  .icon.close:hover{background:#c42b1c;color:#fff}
+  .pin svg{transition:transform .2s ease;transform:rotate(45deg)}
+  .pin{color:color-mix(in srgb,var(--bar-ink) 45%,var(--bar))}
+  .pin.on{color:var(--accent)}
+  .pin.on svg{transform:rotate(0deg)}
+  body.browser .win{display:none}
+
+  /* 時鐘 */
+  .clock{display:flex;align-items:baseline;justify-content:space-between;padding:10px 14px 8px;background:var(--card);border-bottom:1px solid var(--line);flex-shrink:0}
+  .clock .d{font-size:13px;color:var(--muted)}
+  .clock .t{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:1px}
+
+  /* 更新橫幅 */
+  .banner{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--accent-soft);border-bottom:1px solid var(--line);font-size:13px;flex-shrink:0}
+  .banner span{flex:1}
+  .banner .bar{flex:1;height:6px;background:var(--card);border-radius:3px;overflow:hidden}
+  .banner .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+
+  /* 分頁 */
+  .tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line);flex-shrink:0}
+  .tabs button{flex:1;border:0;background:transparent;padding:8px 0;color:var(--muted);border-bottom:2px solid transparent;font-weight:600}
+  .tabs button.active{color:var(--ink);border-bottom-color:var(--accent)}
+  .badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;line-height:18px}
+  .badge:empty{display:none}
+
+  main{flex:1;overflow-y:auto;padding:10px 12px 14px}
+
+  /* 日曆 */
+  .cal{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:8px;margin-bottom:10px}
+  .cal-head{display:flex;align-items:center;gap:4px;margin-bottom:6px}
+  .cal-head .ttl{flex:1;font-weight:600;padding-left:4px}
+  .sbtn{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:2px 8px;font-size:12px}
+  .sbtn:hover{background:var(--soft)}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .dow{text-align:center;font-size:11px;color:var(--muted);padding:2px 0}
+  .dow:first-child,.dow:last-child{color:color-mix(in srgb,var(--accent) 75%,var(--muted))}
+  .day{position:relative;border:0;background:transparent;height:32px;border-radius:7px;font-variant-numeric:tabular-nums}
+  .day:hover{background:var(--soft)}
+  .day.other{color:color-mix(in srgb,var(--muted) 55%,var(--card))}
+  .day.today{box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:700}
+  .day.sel{background:var(--accent);color:#fff;font-weight:700}
+  .day .dot{position:absolute;left:50%;bottom:3px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--accent)}
+  .day .dot.done{background:var(--ok)}
+  .day.sel .dot{background:#fff}
+
+  .sec-head{display:flex;align-items:center;gap:8px;margin:4px 2px 8px}
+  .sec-head h2{margin:0;font-size:15px;flex:1}
+  .sub{font-size:12px;color:var(--muted)}
+
+  /* 新增列 */
+  .add{display:flex;gap:6px;margin-bottom:10px}
+  .add input,.field{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 8px;min-width:0}
+  .add input:focus,.field:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  .add input[type=text]{flex:1}
+  .add input[type=time]{width:98px;flex-shrink:0}
+  .add button,.btn{border:0;background:var(--ink);color:var(--card);border-radius:8px;padding:0 12px;flex-shrink:0}
+  .btn{padding:8px 14px}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{background:var(--soft)}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  /* 清單 */
+  ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .item{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 8px;border-left:3px solid var(--line)}
+  .item .time{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted);width:38px;flex-shrink:0}
+  .item .text{flex:1;word-break:break-word;line-height:1.35;outline:none;border-radius:4px}
+  .item .text[contenteditable=true]{background:var(--soon-soft);box-shadow:0 0 0 2px var(--soon);padding:0 3px}
+  .item .tag{font-size:11px;padding:1px 6px;border-radius:9px;flex-shrink:0}
+  .item .meta{font-size:11px;font-weight:600;color:var(--muted);background:var(--soft);border-radius:5px;padding:2px 6px;flex-shrink:0;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .item.soon{border-left-color:var(--soon)}
+  .item.soon .tag{background:var(--soon-soft);color:var(--soon)}
+  .item.overdue{border-left-color:var(--warn)}
+  .item.overdue .tag{background:var(--warn-soft);color:var(--warn)}
+  .item.today{border-left-color:var(--accent)}
+  .item.today .tag{background:var(--accent-soft);color:var(--accent)}
+  .item.active .tag,.item.later .tag{background:var(--soft);color:var(--muted)}
+  .item.later .text{color:var(--muted)}
+  .item.done{opacity:.6;border-left-color:var(--ok)}
+  .item.done .text{text-decoration:line-through;color:var(--muted)}
+  .del{border:0;background:transparent;color:var(--muted);opacity:.6;width:22px;height:22px;border-radius:5px;flex-shrink:0;font-size:16px;line-height:1}
+  .del:hover{background:var(--warn-soft);color:var(--warn);opacity:1}
+
+  .chk{appearance:none;-webkit-appearance:none;width:18px;height:18px;border:2px solid color-mix(in srgb,var(--muted) 70%,var(--card));border-radius:5px;margin:0;flex-shrink:0;display:grid;place-items:center;background:var(--card);cursor:pointer}
+  .chk:checked{background:var(--ok);border-color:var(--ok)}
+  .chk:checked::after{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
+
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:18px 0;border:1px dashed var(--line);border-radius:8px}
+
+  /* 必做 */
+  .seg{display:flex;background:var(--seg);border-radius:9px;padding:3px;gap:2px;margin-bottom:10px}
+  .seg button{flex:1;border:0;background:transparent;border-radius:7px;padding:6px 0;font-size:13px;color:var(--muted);position:relative}
+  .seg button.active{background:var(--card);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .seg button .n{position:absolute;top:-2px;right:2px;font-size:10px;min-width:15px;line-height:15px;border-radius:8px;background:var(--accent);color:#fff;font-weight:600}
+  .seg button .n:empty{display:none}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:9px 10px;margin-bottom:10px}
+  .period .row{display:flex;justify-content:space-between;align-items:baseline}
+  .period .lbl{font-weight:600}
+  .period .cnt{font-size:12px;color:var(--muted)}
+  .pbar{height:6px;background:var(--seg);border-radius:3px;margin-top:7px;overflow:hidden}
+  .pbar i{display:block;height:100%;background:var(--ok);border-radius:3px;transition:width .3s}
+  .hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .opts{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:6px;font-size:12px;color:var(--muted)}
+  .wd{width:30px;height:28px;border:1px solid var(--line);background:var(--card);border-radius:7px;font-size:13px;color:var(--ink);padding:0}
+  .wd.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  .opts select{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:4px 2px;font-size:13px;color:var(--ink)}
+  .opts .note{width:100%;font-size:11px;margin-top:2px}
+
+  /* 設定面板 */
+  .sheet{position:absolute;inset:36px 0 0 0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+  .sheet-head{display:flex;align-items:center;background:var(--card);border-bottom:1px solid var(--line);flex-shrink:0}
+  .sheet-head .tabs{flex:1;border:0}
+  .sheet-head .x{border:0;background:transparent;width:40px;height:36px;font-size:18px;color:var(--muted)}
+  .sheet-body{flex:1;overflow-y:auto;padding:10px 12px 14px}
+  .lab{font-size:12px;font-weight:700;color:var(--muted);margin:10px 2px 6px}
+  .lab:first-child{margin-top:0}
+  .sheet-actions{position:sticky;bottom:-14px;display:flex;gap:6px;justify-content:flex-end;padding:10px 0 4px;background:var(--bg)}
+
+  /* 預覽 */
+  .pv-wrap{position:sticky;top:-10px;z-index:2;background:var(--bg);padding:2px 0 8px}
+  .pv-title{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);margin:0 2px 5px}
+  .pv{border:1px solid var(--line);border-radius:10px;overflow:hidden;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+  .pv .titlebar{-webkit-app-region:no-drag;height:24px}
+  .pv .clock{padding:3px 10px}
+  .pv .clock .d{font-size:11px}
+  .pv .clock .t{font-size:15px}
+  .pv .tabs button{padding:3px 0;font-size:12px}
+  .pv .pv-body{padding:5px 7px;display:flex;flex-direction:column;gap:4px}
+  .pv .item{padding:3px 7px;font-size:12px}
+  .pv .chk{width:15px;height:15px}
+
+  .presets{display:flex;gap:6px;flex-wrap:wrap}
+  .preset{display:flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--card);border-radius:16px;padding:3px 9px 3px 4px;font-size:12px}
+  .preset i{display:flex;width:26px;height:16px;border-radius:8px;overflow:hidden}
+  .preset i b{flex:1}
+  .targets{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .target{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 2px;font-size:11px}
+  .target i{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
+  .target.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);font-weight:700}
+
+  .picker{display:flex;gap:10px;align-items:flex-start}
+  .wheel-col{display:flex;flex-direction:column;gap:8px;align-items:center}
+  .wheel-wrap{position:relative;width:170px;height:170px}
+  #wheel{width:170px;height:170px;display:block;touch-action:none}
+  #wheelDot{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.5),0 1px 3px rgba(0,0,0,.4);pointer-events:none}
+  .vrow{display:flex;align-items:center;gap:6px;width:170px;font-size:11px;color:var(--muted)}
+  #val{flex:1;-webkit-appearance:none;appearance:none;height:10px;border-radius:5px;outline:none}
+  #val::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.4);box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:pointer}
+  .pick-side{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .cmp{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);height:44px}
+  .cmp span{flex:1;display:flex;align-items:flex-end;justify-content:center;font-size:10px;padding-bottom:2px;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.7)}
+  .rgb{display:grid;grid-template-columns:16px 1fr;gap:4px 4px;align-items:center;font-size:12px;font-weight:700}
+  .rgb input{width:100%;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);font-variant-numeric:tabular-nums}
+  .rgb .r{color:#d33}.rgb .g{color:#2a2}.rgb .b{color:#36d}
+  .dropper{display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 4px;font-size:12px}
+  .dropper:hover{border-color:var(--accent);color:var(--accent)}
+
+  .kv{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0}
+  .kv span:first-child{color:var(--muted)}
+  .mono{font-family:Consolas,"Cascadia Mono",monospace;font-size:12px}
+  .desc{font-size:12px;color:var(--muted);line-height:1.55;margin:4px 0 8px}
+
+  /* 對話框 */
+  .modal{position:absolute;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:8;padding:14px}
+  .modal-box{background:var(--card);border-radius:12px;padding:14px;width:100%;max-height:100%;overflow-y:auto;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  .modal-box h3{margin:0 0 8px;font-size:15px}
+  .who{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+  .who div{background:var(--soft);border-radius:8px;padding:7px 8px;font-size:12px;line-height:1.5}
+  .who b{display:block;font-size:13px}
+  .verdict{border-radius:8px;padding:8px 10px;font-size:13px;margin:6px 0;line-height:1.5}
+  .verdict.ok{background:color-mix(in srgb,var(--ok) 15%,var(--card));color:color-mix(in srgb,var(--ok) 80%,var(--ink))}
+  .verdict.warn{background:var(--warn-soft);color:var(--warn)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:8px 0}
+  .stats div{text-align:center;background:var(--soft);border-radius:8px;padding:6px 0;font-size:11px;color:var(--muted)}
+  .stats b{display:block;font-size:17px;color:var(--ink)}
+  .confirm{display:flex;gap:6px;align-items:flex-start;font-size:13px;margin:8px 0;cursor:pointer}
+  .confirm .chk{margin-top:1px}
+  .row-end{display:flex;justify-content:flex-end;gap:6px;margin-top:10px}
+  textarea.field{width:100%;height:120px;resize:none;font-size:11px}
+
+  /* 通知 */
+  #toasts{position:fixed;left:8px;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px;z-index:9;pointer-events:none}
+  body.browser #toasts{left:50%;right:auto;width:360px;margin-left:-180px;bottom:auto;top:110px}
+  .toast{pointer-events:auto;background:var(--bar);color:var(--bar-ink);border-radius:9px;padding:10px 12px;box-shadow:0 6px 20px rgba(0,0,0,.25);border-left:4px solid var(--accent);animation:pop .25s ease;cursor:pointer}
+  .toast b{display:block;margin-bottom:2px}
+  .toast span{font-size:13px;opacity:.85}
+  @keyframes pop{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="titlebar">
+    <button id="pinBtn" class="icon pin" title="釘選：保持在所有視窗最上層">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3a1 1 0 0 1 .7 1.7L15.4 6l2.3 4.6 1.6-.6a1 1 0 0 1 1 1.6l-3.6 3.6-.1.1L21 19.6a1 1 0 0 1-1.4 1.4l-4.3-4.3-3.6 3.6a1 1 0 0 1-1.6-1l.6-1.7L6 15.4l-1.3 1.3A1 1 0 0 1 3 16c0-3 1.6-5.2 4.7-5.9L10.6 7a1 1 0 0 1 .3-.7l4.4-3A1 1 0 0 1 16 3z" transform="scale(-1,1) translate(-24,0)"/></svg>
+    </button>
+    <div class="title">代辦事項</div>
+    <div class="spacer"></div>
+    <button id="setBtn" class="icon" title="設定：配色、繼承資料、更新">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <button id="testBtn" class="icon" title="測試提醒通知">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    </button>
+    <button id="minBtn" class="icon win" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="5.5" width="10" height="1.2" fill="currentColor"/></svg></button>
+    <button id="closeBtn" class="icon win close" title="關閉"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.3"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9"/></svg></button>
+  </header>
+
+  <section class="clock"><div class="d" id="clockDate"></div><div class="t" id="clockTime"></div></section>
+
+  <div class="banner hidden" id="upBanner">
+    <span id="upText"></span>
+    <div class="bar hidden" id="upBar"><i></i></div>
+    <button class="btn primary" id="upAction" style="padding:4px 10px"></button>
+  </div>
+
+  <nav class="tabs" id="mainTabs">
+    <button data-tab="plan" class="active">行程<span class="badge" id="badgePlan"></span></button>
+    <button data-tab="must">必做<span class="badge" id="badgeMust"></span></button>
+  </nav>
+
+  <main>
+    <section id="tab-plan">
+      <div class="cal" id="cal">
+        <div class="cal-head">
+          <button class="sbtn" id="prevM" title="上個月">‹</button>
+          <div class="ttl" id="calTitle"></div>
+          <button class="sbtn" id="todayBtn">今天</button>
+          <button class="sbtn" id="nextM" title="下個月">›</button>
+          <button class="sbtn" id="calFold" title="收合日曆">▴</button>
+        </div>
+        <div class="grid" id="calGrid"></div>
+      </div>
+      <div class="sec-head"><h2 id="dayTitle"></h2><span class="sub" id="dayCount"></span></div>
+      <form class="add" id="addTask">
+        <input type="time" id="taskTime" title="時間（可留空＝全天）">
+        <input type="text" id="taskText" placeholder="要做什麼事？" autocomplete="off">
+        <button type="submit">新增</button>
+      </form>
+      <ul class="list" id="taskList"></ul>
+    </section>
+
+    <section id="tab-must" class="hidden">
+      <div class="seg" id="seg"></div>
+      <div class="card period">
+        <div class="row"><span class="lbl" id="periodLabel"></span><span class="cnt" id="periodCount"></span></div>
+        <div class="pbar"><i id="periodBar"></i></div>
+        <div class="hint" id="periodHint"></div>
+      </div>
+      <div class="opts hidden" id="mustOpts"></div>
+      <form class="add" id="addMust">
+        <input type="time" id="mustTime">
+        <input type="text" id="mustText" placeholder="新增必辦事項" autocomplete="off">
+        <button type="submit">新增</button>
+      </form>
+      <ul class="list" id="mustList"></ul>
+    </section>
+  </main>
+
+  <!-- 設定 -->
+  <div class="sheet hidden" id="sheet">
+    <div class="sheet-head">
+      <nav class="tabs" id="sheetTabs">
+        <button data-s="look" class="active">配色</button>
+        <button data-s="data">繼承資料</button>
+        <button data-s="about">更新</button>
+      </nav>
+      <button class="x" id="sheetClose" title="關閉設定">×</button>
+    </div>
+    <div class="sheet-body" id="sheetBody">
+      <!-- 配色 -->
+      <section id="s-look">
+        <div class="pv-wrap">
+          <div class="pv-title"><span>預覽（按「套用」前不會改變）</span><span id="pvState"></span></div>
+          <div class="pv" id="pv">
+            <div class="titlebar">
+              <span class="icon pin on" style="width:24px"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="6"/><rect x="11" y="12" width="2" height="10"/></svg></span>
+              <span class="title">代辦事項</span>
+            </div>
+            <div class="clock"><span class="d">11 月 5 日　星期四</span><span class="t">09:30</span></div>
+            <div class="tabs"><button class="active">行程<span class="badge">2</span></button><button>必做</button></div>
+            <div class="pv-body">
+              <div class="item soon"><span class="chk"></span><span class="time">10:00</span><span class="text">部門週會</span><span class="tag">1 小時內</span></div>
+              <div class="item"><span class="chk"></span><span class="time">14:30</span><span class="text">回覆客戶信件</span></div>
+              <div class="item done"><input type="checkbox" class="chk" checked tabindex="-1"><span class="time">全天</span><span class="text">繳電話費</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lab">① 選擇要改的部位</div>
+        <div class="targets" id="targets"></div>
+
+        <div class="lab">② 用滴管在色環上點選（可拖曳）</div>
+        <div class="picker">
+          <div class="wheel-col">
+            <div class="wheel-wrap"><canvas id="wheel" width="340" height="340"></canvas><i id="wheelDot"></i></div>
+            <div class="vrow">暗<input type="range" id="val" min="0" max="100">亮</div>
+          </div>
+          <div class="pick-side">
+            <div class="cmp"><span id="swOld">原本</span><span id="swNew">新的</span></div>
+            <div class="rgb">
+              <span class="r">R</span><input type="number" id="cR" min="0" max="255">
+              <span class="g">G</span><input type="number" id="cG" min="0" max="255">
+              <span class="b">B</span><input type="number" id="cB" min="0" max="255">
+              <span>#</span><input type="text" id="cHex" maxlength="7" class="mono">
+            </div>
+            <button class="dropper" id="dropper" title="從螢幕上任何地方吸取顏色">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>
+              螢幕滴管
+            </button>
+          </div>
+        </div>
+
+        <div class="lab">或直接套用快速配色</div>
+        <div class="presets" id="presets"></div>
+
+        <div class="sheet-actions">
+          <button class="btn ghost" id="thReset">恢復預設</button>
+          <span class="spacer"></span>
+          <button class="btn ghost" id="thCancel">取消變更</button>
+          <button class="btn primary" id="thApply">套用</button>
+        </div>
+      </section>
+
+      <!-- 繼承資料 -->
+      <section id="s-data" class="hidden">
+        <div class="lab">使用者</div>
+        <div class="card">
+          <div class="kv"><span>名稱</span></div>
+          <input class="field" id="userName" placeholder="輸入你的名字（換電腦時用來確認身分）" style="width:100%">
+          <div class="kv" style="margin-top:6px"><span>使用者 ID</span><span class="mono" id="userId"></span></div>
+        </div>
+
+        <div class="lab">① 舊電腦：匯出繼承檔</div>
+        <div class="card">
+          <div class="desc">把所有行程、必做事項、勾選紀錄和配色存成一個檔案，複製到新電腦（隨身碟、雲端硬碟、Email 都可以）。</div>
+          <button class="btn primary" id="exportBtn">匯出繼承檔</button>
+        </div>
+
+        <div class="lab">② 新電腦：匯入繼承</div>
+        <div class="card">
+          <div class="desc">選擇繼承檔後，會先確認是不是同一位使用者，再把「這台電腦現有的資料」和「檔案裡的資料」合併。重複匯入也不會產生重複項目；兩邊都改過的同一筆事項，會保留最後修改的版本。</div>
+          <button class="btn primary" id="importBtn">選擇繼承檔匯入</button>
+          <div class="desc" id="importHist" style="margin:8px 0 0"></div>
+        </div>
+      </section>
+
+      <!-- 更新 -->
+      <section id="s-about" class="hidden">
+        <div class="card">
+          <div class="kv"><span>目前版本</span><b id="verText"></b></div>
+          <div class="kv"><span>狀態</span><span id="upState">—</span></div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn primary" id="checkUpBtn">檢查更新</button>
+            <button class="btn ghost hidden" id="aboutAction"></button>
+          </div>
+        </div>
+        <div class="desc">程式每次啟動、之後每 6 小時會自動檢查新版本。有新版本時，視窗上方會出現提示，按「立即更新」就會下載，下載完按「重新啟動」即完成更新，資料都會保留。</div>
+      </section>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="modal"><div class="modal-box" id="modalBox"></div></div>
+</div>
+<div id="toasts"></div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+
+<script>
+(() => {
+  const desktop = window.desktop || null;
+  if (!desktop) document.body.classList.add('browser');
+
+  const KEY = 'floating-todo-v1';
+  const WD = ['日','一','二','三','四','五','六'];
+  const WD_ORDER = [1,2,3,4,5,6,0];
+  const PERIODS = [['daily','每日'],['weekly','每週'],['monthly','每月'],['quarterly','每季'],['yearly','每年']];
+  const HOUR = 3600e3;
+  const $ = s => document.querySelector(s);
+  const now = () => Date.now();
+  const uid = () => now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  // ================= 資料 =================
+  const blankReq = () => ({daily:[],weekly:[],monthly:[],quarterly:[],yearly:[]});
+  const blank = () => ({ v: 2, user: null, tasks: [], required: blankReq(), reqDone: {}, deleted: {},
+                         notified: {}, pinned: false, calOpen: true, theme: null, imports: [] });
+  let state = blank();
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s) { state = Object.assign(blank(), s); state.required = Object.assign(blankReq(), s.required || {}); }
+  } catch (e) {}
+  // 舊版資料升級
+  if (!state.user) state.user = { id: uid() + uid(), name: '', created: now() };
+  state.tasks.forEach(t => { if (t.u == null) t.u = 0; });
+  PERIODS.forEach(([k]) => state.required[k].forEach(r => { if (r.u == null) r.u = 0; }));
+  state.deleted = state.deleted || {}; state.imports = state.imports || [];
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+  save();
+
+  // ================= 日期工具 =================
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const parseD = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+  const dueOf = (date, time) => { const d = parseD(date); const [h,mi] = time.split(':').map(Number); d.setHours(h, mi, 0, 0); return d; };
+  const md = d => `${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+  const dt = ts => { const d = new Date(ts); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const isoWeek = d => {
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);
+    const y = t.getUTCFullYear();
+    return { y, w: Math.ceil(((t - Date.UTC(y,0,1)) / 864e5 + 1) / 7) };
+  };
+  const monday = d => { const m = new Date(d); m.setDate(d.getDate() - ((d.getDay()+6) % 7)); return m; };
+  const lastDay = d => new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  function periodKey(p, d = new Date()) {
+    const y = d.getFullYear(), m = d.getMonth();
+    if (p === 'daily') return fmt(d);
+    if (p === 'weekly') { const w = isoWeek(d); return `${w.y}-W${pad(w.w)}`; }
+    if (p === 'monthly') return `${y}-${pad(m+1)}`;
+    if (p === 'quarterly') return `${y}-Q${Math.floor(m/3)+1}`;
+    return `${y}`;
+  }
+  function periodInfo(p, d = new Date()) {
+    const y = d.getFullYear(), m = d.getMonth();
+    if (p === 'daily') return [`今天 ${md(d)}（${WD[d.getDay()]}）`, '每天 00:00 自動重置勾選｜可設定時間，到期前 1 小時未完成會提醒'];
+    if (p === 'weekly') { const a = monday(d), b = new Date(a); b.setDate(a.getDate()+6);
+      return [`本週 ${md(a)} – ${md(b)}`, '每週一自動重置｜可指定週幾（選多天則每天各自勾選），設定時間會在當天到期前 1 小時提醒']; }
+    if (p === 'monthly') return [`${y} 年 ${m+1} 月`, '每月 1 日自動重置｜可設定日期範圍，設定時間則在最後一天到期前 1 小時提醒'];
+    if (p === 'quarterly') { const q = Math.floor(m/3); return [`${y} 年第 ${q+1} 季（${q*3+1}–${q*3+3} 月）`, '每季第一天自動重置勾選']; }
+    return [`${y} 年`, '每年 1 月 1 日自動重置勾選'];
+  }
+
+  const hasDays = r => Array.isArray(r.days) && r.days.length > 0;
+  function weeklyOcc(r, n = new Date()) {
+    const ti = (n.getDay()+6) % 7;
+    const idx = r.days.map(d => (d+6) % 7).sort((a, b) => a - b);
+    const past = idx.filter(i => i < ti);
+    const pick = idx.includes(ti) ? ti : (past.length ? past[past.length-1] : idx.find(i => i > ti));
+    const m = monday(n); m.setDate(m.getDate() + pick); return m;
+  }
+  function mRange(r, d = new Date()) {
+    if (!r.from && !r.to && !r.time) return null;
+    const L = lastDay(d);
+    let a = Math.min(r.from || 1, L), b = Math.min(r.to || L, L);
+    if (a > b) [a, b] = [b, a];
+    return [a, b];
+  }
+  const reqKey = (r, p) => (p === 'weekly' && hasDays(r)) ? `${r.id}|${fmt(weeklyOcc(r))}` : `${r.id}|${periodKey(p)}`;
+  const isReqDone = (r, p) => (state.reqDone[reqKey(r, p)] || 0) > 0;   // 正數＝勾選時間，負數＝取消時間
+
+  // ================= 介面狀態 =================
+  let today = fmt(new Date());
+  let selDate = today;
+  let view = new Date(); view.setDate(1);
+  let must = 'daily';
+  let wdSel = [], mFrom = '', mTo = '';
+
+  function tick() {
+    const n = new Date();
+    $('#clockDate').textContent = `${n.getFullYear()} 年 ${n.getMonth()+1} 月 ${n.getDate()} 日　星期${WD[n.getDay()]}`;
+    $('#clockTime').textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+    const t = fmt(n);
+    if (t !== today) { if (selDate === today) selDate = t; today = t; view = new Date(n); view.setDate(1); renderAll(); }
+  }
+
+  const tagText = { overdue: '已逾時', soon: '1 小時內' };
+  function status(done, date, time) {
+    if (done || !time) return '';
+    const diff = dueOf(date, time) - new Date();
+    if (diff < 0) return 'overdue';
+    if (diff <= HOUR) return 'soon';
+    return '';
+  }
+  function reqStatus(r, p, done) {
+    if (done) return ['', ''];
+    if (p === 'daily') { const s = status(false, today, r.time); return [s, tagText[s] || '']; }
+    if (p === 'weekly' && hasDays(r)) {
+      const o = fmt(weeklyOcc(r));
+      if (o < today) return ['overdue', '已逾期'];
+      if (o > today) return ['later', `下次 ${md(parseD(o))}`];
+      const s = status(false, today, r.time); return [s || 'today', tagText[s] || '今天'];
+    }
+    if (p === 'monthly') {
+      const g = mRange(r); if (!g) return ['', ''];
+      const d = new Date().getDate();
+      if (d < g[0]) return ['later', `${g[0]} 日開始`];
+      if (d > g[1]) return ['overdue', '已逾期'];
+      if (d === g[1]) { const s = r.time ? status(false, today, r.time) : ''; return [s || 'today', tagText[s] || '今天截止']; }
+      return ['active', `剩 ${g[1]-d+1} 天`];
+    }
+    return ['', ''];
+  }
+  const isOpen = (r, p) => !isReqDone(r, p) && reqStatus(r, p, false)[0] !== 'later';
+  function reqMeta(r, p) {
+    if (p === 'daily') return r.time || '';
+    if (p === 'weekly' && hasDays(r))
+      return '週' + WD_ORDER.filter(d => r.days.includes(d)).map(d => WD[d]).join('、') + (r.time ? ` ${r.time}` : '');
+    if (p === 'monthly' && (r.from || r.to || r.time)) {
+      const g = mRange(r);
+      return (r.from || r.to ? (g[0] === g[1] ? `${g[0]} 日` : `${g[0]}–${g[1]} 日`) : '月底') + (r.time ? ` ${r.time}` : '');
+    }
+    return '';
+  }
+
+  // ================= 繪製：行程 =================
+  function renderCal() {
+    $('#calGrid').classList.toggle('hidden', !state.calOpen);
+    $('#calFold').textContent = state.calOpen ? '▴' : '▾';
+    const y = view.getFullYear(), m = view.getMonth();
+    $('#calTitle').textContent = `${y} 年 ${m+1} 月`;
+    const first = new Date(y, m, 1);
+    const rows = Math.ceil((first.getDay() + lastDay(first)) / 7);
+    const start = new Date(y, m, 1 - first.getDay());
+    const cnt = {};
+    state.tasks.forEach(t => { const c = cnt[t.date] || (cnt[t.date] = {n:0, open:0}); c.n++; if (!t.done) c.open++; });
+    let h = WD.map(w => `<div class="dow">${w}</div>`).join('');
+    for (let i = 0; i < rows*7; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const k = fmt(d), c = cnt[k];
+      const cls = ['day', d.getMonth() !== m && 'other', k === today && 'today', k === selDate && 'sel'].filter(Boolean).join(' ');
+      h += `<button class="${cls}" data-date="${k}">${d.getDate()}${c ? `<i class="dot ${c.open ? '' : 'done'}"></i>` : ''}</button>`;
+    }
+    $('#calGrid').innerHTML = h;
+  }
+  function renderDay() {
+    const d = parseD(selDate);
+    $('#dayTitle').textContent = `${d.getMonth()+1} 月 ${d.getDate()} 日（${WD[d.getDay()]}）` + (selDate === today ? '・今天' : '');
+    const list = state.tasks.filter(t => t.date === selDate).sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+    const done = list.filter(t => t.done).length;
+    $('#dayCount').textContent = list.length ? `完成 ${done}/${list.length}` : '';
+    $('#taskList').innerHTML = list.length ? list.map(t => {
+      const st = status(t.done, t.date, t.time);
+      return `<li class="item ${t.done ? 'done' : ''} ${st}" data-id="${t.id}">
+        <input type="checkbox" class="chk" ${t.done ? 'checked' : ''} title="完成">
+        <span class="time">${t.time || '全天'}</span>
+        <span class="text" title="雙擊可編輯">${esc(t.text)}</span>
+        ${st ? `<span class="tag">${tagText[st]}</span>` : ''}
+        <button class="del" title="刪除">×</button></li>`;
+    }).join('') : `<li class="empty">這天還沒有安排，從上方新增吧</li>`;
+  }
+
+  // ================= 繪製：必做 =================
+  function renderMust() {
+    $('#seg').innerHTML = PERIODS.map(([k, n]) => {
+      const open = state.required[k].filter(r => isOpen(r, k)).length;
+      return `<button data-p="${k}" class="${k === must ? 'active' : ''}">${n}<span class="n">${open || ''}</span></button>`;
+    }).join('');
+    const [lbl, hint] = periodInfo(must);
+    const items = state.required[must];
+    const done = items.filter(r => isReqDone(r, must)).length;
+    $('#periodLabel').textContent = lbl;
+    $('#periodCount').textContent = items.length ? `完成 ${done}/${items.length}` : '';
+    $('#periodBar').style.width = items.length ? `${done / items.length * 100}%` : '0';
+    $('#periodHint').textContent = hint;
+    $('#mustTime').classList.toggle('hidden', !['daily','weekly','monthly'].includes(must));
+    $('#mustTime').title = must === 'monthly' ? '截止時間（範圍最後一天，可留空）' : must === 'weekly' ? '時間（需先選週幾，可留空）' : '時間（可留空）';
+    $('#mustText').placeholder = `新增${PERIODS.find(p => p[0] === must)[1]}必辦事項`;
+    renderOpts();
+    let sorted = [...items];
+    if (must === 'daily') sorted.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+    if (must === 'weekly') { const k = r => hasDays(r) ? fmt(weeklyOcc(r)) + (r.time || '99:99') : '9999'; sorted.sort((a, b) => k(a).localeCompare(k(b))); }
+    if (must === 'monthly') { const k = r => { const g = (r.from || r.to) ? mRange(r) : null; return g ? g[0]*100 + g[1] : 9999; }; sorted.sort((a, b) => k(a) - k(b)); }
+    $('#mustList').innerHTML = sorted.length ? sorted.map(r => {
+      const dn = isReqDone(r, must);
+      const [st, tag] = reqStatus(r, must, dn);
+      const meta = reqMeta(r, must);
+      return `<li class="item ${dn ? 'done' : ''} ${st}" data-id="${r.id}">
+        <input type="checkbox" class="chk" ${dn ? 'checked' : ''} title="完成">
+        ${meta ? `<span class="meta">${meta}</span>` : ''}
+        <span class="text" title="雙擊可編輯">${esc(r.text)}</span>
+        ${tag ? `<span class="tag">${tag}</span>` : ''}
+        <button class="del" title="刪除">×</button></li>`;
+    }).join('') : `<li class="empty">還沒有${PERIODS.find(p => p[0] === must)[1]}必辦事項</li>`;
+  }
+  function renderOpts() {
+    const el = $('#mustOpts');
+    if (must === 'weekly') {
+      el.innerHTML = '<span>週幾</span>' + WD_ORDER.map(d => `<button type="button" class="wd ${wdSel.includes(d) ? 'on' : ''}" data-wd="${d}">${WD[d]}</button>`).join('') +
+        '<span class="note">不選＝本週內任一天完成即可</span>';
+    } else if (must === 'monthly') {
+      const opt = v => '<option value="">—</option>' + Array.from({length: 31}, (_, i) => `<option value="${i+1}" ${String(i+1) === v ? 'selected' : ''}>${i+1}</option>`).join('');
+      el.innerHTML = `<span>日期 從</span><select id="mFrom">${opt(mFrom)}</select><span>日 到</span><select id="mTo">${opt(mTo)}</select><span>日</span><span class="note">不選＝整個月；超過當月天數會自動算到月底</span>`;
+    } else el.innerHTML = '';
+    el.classList.toggle('hidden', !el.innerHTML);
+  }
+  function renderBadges() {
+    $('#badgePlan').textContent = state.tasks.filter(t => t.date === today && !t.done).length || '';
+    let openMust = 0;
+    PERIODS.forEach(([k]) => openMust += state.required[k].filter(r => isOpen(r, k)).length);
+    $('#badgeMust').textContent = openMust || '';
+  }
+  function renderPin() {
+    $('#pinBtn').classList.toggle('on', state.pinned);
+    $('#pinBtn').title = state.pinned ? '已釘選在最上層（點擊取消）' : '釘選：保持在所有視窗最上層';
+  }
+  function renderAll() { renderCal(); renderDay(); renderMust(); renderBadges(); renderPin(); }
+
+  // ================= 通知 =================
+  function toast(title, body, ms = 12000) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `<b>${esc(title)}</b><span>${esc(body)}</span>`;
+    el.onclick = () => el.remove();
+    $('#toasts').appendChild(el);
+    setTimeout(() => el.remove(), ms);
+  }
+  function notify(title, body) {
+    toast(title, body);
+    if (desktop) { desktop.notify(title, body); return; }
+    try { if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body }); } catch (e) {}
+  }
+  function askPermission() { try { if (!desktop && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {} }
+
+  function checkReminders() {
+    const n = new Date(), due = [];
+    state.tasks.forEach(t => { if (!t.done && t.time) due.push({ key: `t|${t.id}|${t.date} ${t.time}`, at: dueOf(t.date, t.time), text: t.text, time: t.time }); });
+    state.required.daily.forEach(r => { if (r.time && !isReqDone(r, 'daily')) due.push({ key: `r|${r.id}|${today} ${r.time}`, at: dueOf(today, r.time), text: `［每日必做］${r.text}`, time: r.time }); });
+    state.required.weekly.forEach(r => {
+      if (!hasDays(r) || !r.time || isReqDone(r, 'weekly')) return;
+      const o = fmt(weeklyOcc(r));
+      if (o === today) due.push({ key: `r|${r.id}|${o} ${r.time}`, at: dueOf(o, r.time), text: `［每週必做］${r.text}`, time: r.time });
+    });
+    state.required.monthly.forEach(r => {
+      if (!r.time || isReqDone(r, 'monthly')) return;
+      const g = mRange(r);
+      const o = fmt(new Date(n.getFullYear(), n.getMonth(), g[1]));
+      due.push({ key: `r|${r.id}|${o} ${r.time}`, at: dueOf(o, r.time), text: `［每月必做］${r.text}`, time: `${g[1]} 日 ${r.time}` });
+    });
+    let changed = false;
+    due.forEach(it => {
+      const diff = it.at - n;
+      if (diff > 0 && diff <= HOUR && !state.notified[it.key]) {
+        state.notified[it.key] = now(); changed = true;
+        notify('⏰ 代辦提醒', `「${it.text}」將在 ${it.time} 到期（剩 ${Math.ceil(diff / 60000)} 分鐘），尚未完成`);
+      }
+    });
+    const old = now() - 7 * 864e5;
+    for (const k in state.notified) if (state.notified[k] < old) { delete state.notified[k]; changed = true; }
+    if (changed) save();
+  }
+
+  // ================= 行內編輯 =================
+  function startEdit(span, onSave) {
+    span.contentEditable = 'true'; span.focus();
+    const r = document.createRange(); r.selectNodeContents(span);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    const finish = keep => {
+      span.contentEditable = 'false';
+      span.removeEventListener('blur', onBlur); span.removeEventListener('keydown', onKey);
+      const v = span.textContent.trim();
+      if (keep && v) onSave(v);
+      renderAll();
+    };
+    const onBlur = () => finish(true);
+    const onKey = e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } if (e.key === 'Escape') finish(false); };
+    span.addEventListener('blur', onBlur); span.addEventListener('keydown', onKey);
+  }
+
+  // ================= 主畫面事件 =================
+  document.addEventListener('click', askPermission, { once: true });
+  $('#pinBtn').onclick = async () => {
+    state.pinned = !state.pinned; save(); renderPin();
+    if (desktop) await desktop.setPin(state.pinned);
+    else toast(state.pinned ? '📌 已釘選' : '已取消釘選', state.pinned ? '桌面版會保持在所有視窗最上層（瀏覽器預覽無法置頂）' : '視窗恢復一般層級', 3500);
+  };
+  $('#testBtn').onclick = () => { askPermission(); notify('⏰ 測試提醒', '通知功能正常！到期前 1 小時未完成的事項會像這樣提醒你'); };
+  $('#minBtn').onclick = () => desktop && desktop.minimize();
+  $('#closeBtn').onclick = () => desktop && desktop.close();
+
+  document.querySelectorAll('#mainTabs button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#mainTabs button').forEach(x => x.classList.toggle('active', x === b));
+    $('#tab-plan').classList.toggle('hidden', b.dataset.tab !== 'plan');
+    $('#tab-must').classList.toggle('hidden', b.dataset.tab !== 'must');
+  });
+  $('#prevM').onclick = () => { view.setMonth(view.getMonth() - 1); renderCal(); };
+  $('#nextM').onclick = () => { view.setMonth(view.getMonth() + 1); renderCal(); };
+  $('#todayBtn').onclick = () => { selDate = today; view = new Date(); view.setDate(1); state.calOpen = true; save(); renderCal(); renderDay(); };
+  $('#calFold').onclick = () => { state.calOpen = !state.calOpen; save(); renderCal(); };
+  $('#calGrid').onclick = e => {
+    const b = e.target.closest('.day'); if (!b) return;
+    selDate = b.dataset.date;
+    const d = parseD(selDate);
+    if (d.getMonth() !== view.getMonth() || d.getFullYear() !== view.getFullYear()) { view = new Date(d); view.setDate(1); }
+    renderCal(); renderDay(); $('#taskText').focus();
+  };
+  $('#addTask').onsubmit = e => {
+    e.preventDefault();
+    const text = $('#taskText').value.trim(); if (!text) return $('#taskText').focus();
+    state.tasks.push({ id: uid(), date: selDate, time: $('#taskTime').value, text, done: false, u: now() });
+    $('#taskText').value = ''; $('#taskTime').value = '';
+    save(); renderAll(); checkReminders(); $('#taskText').focus();
+  };
+  $('#taskList').addEventListener('click', e => {
+    const li = e.target.closest('.item'); if (!li) return;
+    const t = state.tasks.find(x => x.id === li.dataset.id); if (!t) return;
+    if (e.target.classList.contains('chk')) { t.done = e.target.checked; t.u = now(); save(); renderAll(); }
+    if (e.target.classList.contains('del')) { state.deleted[t.id] = now(); state.tasks = state.tasks.filter(x => x !== t); save(); renderAll(); }
+  });
+  $('#taskList').addEventListener('dblclick', e => {
+    const span = e.target.closest('.text'); if (!span) return;
+    const t = state.tasks.find(x => x.id === span.closest('.item').dataset.id);
+    startEdit(span, v => { t.text = v; t.u = now(); save(); });
+  });
+
+  $('#seg').onclick = e => { const b = e.target.closest('button'); if (!b) return; must = b.dataset.p; renderMust(); };
+  $('#mustOpts').addEventListener('click', e => {
+    const b = e.target.closest('.wd'); if (!b) return;
+    const d = +b.dataset.wd;
+    wdSel = wdSel.includes(d) ? wdSel.filter(x => x !== d) : [...wdSel, d];
+    b.classList.toggle('on');
+  });
+  $('#mustOpts').addEventListener('change', e => {
+    if (e.target.id === 'mFrom') mFrom = e.target.value;
+    if (e.target.id === 'mTo') mTo = e.target.value;
+  });
+  $('#addMust').onsubmit = e => {
+    e.preventDefault();
+    const text = $('#mustText').value.trim(); if (!text) return $('#mustText').focus();
+    const tm = $('#mustTime').value;
+    const it = { id: uid(), text, time: '', u: now() };
+    if (must === 'daily') it.time = tm;
+    if (must === 'weekly') {
+      if (tm && !wdSel.length) { toast('請先選擇週幾', '每週事項要指定週幾才能設定時間', 4000); return; }
+      it.days = [...wdSel]; it.time = tm;
+    }
+    if (must === 'monthly') {
+      it.from = +mFrom || null; it.to = +mTo || null; it.time = tm;
+      if (it.from && it.to && it.from > it.to) [it.from, it.to] = [it.to, it.from];
+    }
+    state.required[must].push(it);
+    $('#mustText').value = ''; $('#mustTime').value = '';
+    wdSel = []; mFrom = ''; mTo = '';
+    save(); renderAll(); checkReminders(); $('#mustText').focus();
+  };
+  $('#mustList').addEventListener('click', e => {
+    const li = e.target.closest('.item'); if (!li) return;
+    const r = state.required[must].find(x => x.id === li.dataset.id); if (!r) return;
+    if (e.target.classList.contains('chk')) { state.reqDone[reqKey(r, must)] = e.target.checked ? now() : -now(); save(); renderAll(); }
+    if (e.target.classList.contains('del')) { state.deleted[r.id] = now(); state.required[must] = state.required[must].filter(x => x !== r); save(); renderAll(); }
+  });
+  $('#mustList').addEventListener('dblclick', e => {
+    const span = e.target.closest('.text'); if (!span) return;
+    const r = state.required[must].find(x => x.id === span.closest('.item').dataset.id);
+    startEdit(span, v => { r.text = v; r.u = now(); save(); });
+  });
+
+  // ================= 設定面板 =================
+  function openSheet(tab = 'look') {
+    $('#sheet').classList.remove('hidden');
+    switchSheet(tab);
+    draft = Object.assign({}, currentTheme());
+    selectTarget(target);
+    renderData(); renderUpdate();
+  }
+  function switchSheet(s) {
+    document.querySelectorAll('#sheetTabs button').forEach(b => b.classList.toggle('active', b.dataset.s === s));
+    ['look','data','about'].forEach(k => $('#s-' + k).classList.toggle('hidden', k !== s));
+    $('#sheetBody').scrollTop = 0;
+  }
+  $('#setBtn').onclick = () => $('#sheet').classList.contains('hidden') ? openSheet() : $('#sheet').classList.add('hidden');
+  $('#sheetClose').onclick = () => $('#sheet').classList.add('hidden');
+  $('#sheetTabs').onclick = e => { const b = e.target.closest('button'); if (b) switchSheet(b.dataset.s); };
+
+  // ================= 配色 =================
+  const DEFAULT_THEME = { bg:'#f7f5f0', card:'#ffffff', bar:'#2a2d33', barInk:'#f3f1ec', ink:'#22252a', muted:'#7b7f87', accent:'#e0531f', ok:'#2f9e6a' };
+  const TARGETS = [['bg','背景','--bg'],['card','卡片','--card'],['bar','標題列','--bar'],['barInk','標題列文字','--bar-ink'],
+                   ['ink','主要文字','--ink'],['muted','次要文字','--muted'],['accent','強調色','--accent'],['ok','完成色','--ok']];
+  const PRESETS = [
+    ['暖白', DEFAULT_THEME],
+    ['夜間', { bg:'#1c1e24', card:'#272a32', bar:'#121418', barInk:'#e8e6e1', ink:'#e8e6e1', muted:'#9a9ea8', accent:'#ff7a45', ok:'#4cc38a' }],
+    ['薄荷', { bg:'#edf6f1', card:'#ffffff', bar:'#1f4d3f', barInk:'#eafff6', ink:'#1d2b26', muted:'#6c7f78', accent:'#0f9d76', ok:'#5a9e3a' }],
+    ['櫻花', { bg:'#fbf0f2', card:'#ffffff', bar:'#6b2d3c', barInk:'#fff0f3', ink:'#3a2328', muted:'#9a7a82', accent:'#e0607e', ok:'#4f9d73' }],
+    ['海洋', { bg:'#edf2f9', card:'#ffffff', bar:'#1d3557', barInk:'#eaf2ff', ink:'#1b2635', muted:'#6b7b90', accent:'#2f6fdb', ok:'#2f9e6a' }]
+  ];
+  const currentTheme = () => Object.assign({}, DEFAULT_THEME, state.theme || {});
+  let draft = currentTheme();
+  let target = 'accent';
+  let hsv = { h: 0, s: 0, v: 1 };
+
+  function applyVars(el, t) { TARGETS.forEach(([k,, v]) => el.style.setProperty(v, t[k])); }
+  applyVars(document.documentElement, currentTheme());
+
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const hex2rgb = h => { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const rgb2hex = (r, g, b) => '#' + [r, g, b].map(x => clamp(Math.round(x), 0, 255).toString(16).padStart(2, '0')).join('');
+  function rgb2hsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0;
+    if (d) { if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+    return { h, s: mx ? d / mx : 0, v: mx };
+  }
+  function hsv2rgb(h, s, v) {
+    const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+    let r, g, b;
+    if (h < 60) [r,g,b] = [c,x,0]; else if (h < 120) [r,g,b] = [x,c,0]; else if (h < 180) [r,g,b] = [0,c,x];
+    else if (h < 240) [r,g,b] = [0,x,c]; else if (h < 300) [r,g,b] = [x,0,c]; else [r,g,b] = [c,0,x];
+    return [(r + m) * 255, (g + m) * 255, (b + m) * 255].map(Math.round);
+  }
+  const toHex = str => {               // 接受 #rgb / #rrggbb / rgb(r,g,b)
+    str = String(str).trim();
+    const m = str.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+    if (m) return rgb2hex(+m[1], +m[2], +m[3]);
+    if (/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(str)) return rgb2hex(...hex2rgb(str));
+    return null;
+  };
+
+  // 色環
+  const wheel = $('#wheel'), wctx = wheel.getContext('2d'), N = wheel.width, R = N / 2;
+  let wheelV = -1;
+  function drawWheel(v) {
+    if (v === wheelV) return; wheelV = v;
+    const img = wctx.createImageData(N, N), d = img.data;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const dx = x - R + .5, dy = y - R + .5, dist = Math.sqrt(dx*dx + dy*dy);
+      const i = (y * N + x) * 4;
+      if (dist > R) { d[i+3] = 0; continue; }
+      const h = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+      const [r, g, b] = hsv2rgb(h, Math.min(dist / R, 1), v);
+      d[i] = r; d[i+1] = g; d[i+2] = b; d[i+3] = Math.round(clamp(R - dist, 0, 1) * 255);
+    }
+    wctx.putImageData(img, 0, 0);
+  }
+  const DROPPER_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M20.7 3.3a2.4 2.4 0 0 0-3.4 0l-2.6 2.6-1-1-1.4 1.4 1 1L5 15.6 3.6 19.8l.6.6 4.2-1.4 8.3-8.3 1 1 1.4-1.4-1-1 2.6-2.6a2.4 2.4 0 0 0 0-3.4z' fill='white' stroke='black' stroke-width='1.4' stroke-linejoin='round'/></svg>`;
+  wheel.style.cursor = `url("data:image/svg+xml,${encodeURIComponent(DROPPER_SVG)}") 4 20, crosshair`;
+
+  function placeDot() {
+    const rad = hsv.h * Math.PI / 180, r = hsv.s * 85;
+    $('#wheelDot').style.left = (85 + Math.cos(rad) * r) + 'px';
+    $('#wheelDot').style.top = (85 + Math.sin(rad) * r) + 'px';
+    $('#wheelDot').style.background = draft[target];
+  }
+  function syncPicker(src) {
+    const hex = draft[target], [r, g, b] = hex2rgb(hex);
+    drawWheel(Math.round(hsv.v * 100) / 100);
+    placeDot();
+    if (src !== 'val') $('#val').value = Math.round(hsv.v * 100);
+    const full = rgb2hex(...hsv2rgb(hsv.h, hsv.s, 1));
+    $('#val').style.background = `linear-gradient(90deg,#000,${full})`;
+    if (src !== 'rgb') { $('#cR').value = r; $('#cG').value = g; $('#cB').value = b; }
+    if (src !== 'hex') $('#cHex').value = hex.slice(1);
+    $('#swNew').style.background = hex;
+    $('#swOld').style.background = currentTheme()[target];
+    renderTargets(); renderPreview();
+  }
+  function setDraft(hex, src) {
+    draft[target] = hex;
+    if (src !== 'wheel' && src !== 'val') {
+      const n = rgb2hsv(...hex2rgb(hex));
+      hsv = { h: n.s ? n.h : hsv.h, s: n.s, v: n.v };
+    }
+    syncPicker(src);
+  }
+  function selectTarget(k) {
+    target = k;
+    const n = rgb2hsv(...hex2rgb(draft[k]));
+    hsv = { h: n.h, s: n.s, v: n.v };
+    syncPicker();
+  }
+  function renderTargets() {
+    $('#targets').innerHTML = TARGETS.map(([k, n]) => `<button class="target ${k === target ? 'on' : ''}" data-k="${k}"><i style="background:${draft[k]}"></i>${n}</button>`).join('');
+  }
+  function renderPreview() {
+    applyVars($('#pv'), draft);
+    const changed = TARGETS.some(([k]) => draft[k] !== currentTheme()[k]);
+    $('#pvState').textContent = changed ? '● 有未套用的變更' : '';
+    $('#pvState').style.color = 'var(--accent)';
+  }
+  $('#presets').innerHTML = PRESETS.map(([n, t], i) =>
+    `<button class="preset" data-i="${i}"><i>${['bar','bg','accent','ok'].map(k => `<b style="background:${t[k]}"></b>`).join('')}</i>${n}</button>`).join('');
+  $('#presets').onclick = e => { const b = e.target.closest('.preset'); if (!b) return; draft = Object.assign({}, PRESETS[+b.dataset.i][1]); selectTarget(target); };
+  $('#targets').onclick = e => { const b = e.target.closest('.target'); if (b) selectTarget(b.dataset.k); };
+
+  function wheelPick(e) {
+    const rc = wheel.getBoundingClientRect();
+    const x = (e.clientX - rc.left) / rc.width * 2 - 1, y = (e.clientY - rc.top) / rc.height * 2 - 1;
+    hsv.h = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    hsv.s = Math.min(Math.sqrt(x*x + y*y), 1);
+    setDraft(rgb2hex(...hsv2rgb(hsv.h, hsv.s, hsv.v)), 'wheel');
+  }
+  wheel.addEventListener('pointerdown', e => { wheel.setPointerCapture(e.pointerId); wheelPick(e); });
+  wheel.addEventListener('pointermove', e => { if (wheel.hasPointerCapture(e.pointerId)) wheelPick(e); });
+  $('#val').oninput = () => { hsv.v = $('#val').value / 100; setDraft(rgb2hex(...hsv2rgb(hsv.h, hsv.s, hsv.v)), 'val'); };
+  ['#cR','#cG','#cB'].forEach(id => $(id).oninput = () => {
+    const v = ['#cR','#cG','#cB'].map(i => clamp(+$(i).value || 0, 0, 255));
+    setDraft(rgb2hex(...v), 'rgb');
+  });
+  $('#cHex').oninput = () => { const h = toHex($('#cHex').value); if (h && $('#cHex').value.replace('#','').length === 6) setDraft(h, 'hex'); };
+  $('#dropper').onclick = async () => {
+    try {
+      let c = null;
+      if (desktop && desktop.pickColor) c = await desktop.pickColor();
+      else if (window.EyeDropper) c = (await new EyeDropper().open()).sRGBHex;
+      else { toast('此環境不支援螢幕滴管', '請用色環或直接輸入 RGB。桌面版可以吸取螢幕上任何顏色', 5000); return; }
+      const h = c && toHex(c);
+      if (h) setDraft(h, 'drop');
+    } catch (e) {
+      if (e && e.name !== 'AbortError') toast('無法使用螢幕滴管', '預覽環境限制了這個功能，桌面版可以正常使用', 5000);
+    }
+  };
+  $('#thApply').onclick = () => {
+    const isDefault = TARGETS.every(([k]) => draft[k] === DEFAULT_THEME[k]);
+    state.theme = isDefault ? null : Object.assign({}, draft);
+    state.themeU = now();
+    save(); applyVars(document.documentElement, currentTheme());
+    syncPicker(); toast('🎨 已套用配色', '新的顏色已經生效', 3000);
+  };
+  $('#thCancel').onclick = () => { draft = currentTheme(); selectTarget(target); };
+  $('#thReset').onclick = () => { draft = Object.assign({}, DEFAULT_THEME); selectTarget(target); toast('已載入預設配色', '在預覽確認後按「套用」才會生效', 3500); };
+
+  // ================= 繼承資料 =================
+  const shortId = id => id.slice(0, 4).toUpperCase() + '-' + id.slice(4, 8).toUpperCase();
+  function countItems(d) { let n = d.tasks.length; PERIODS.forEach(([k]) => n += (d.required[k] || []).length); return n; }
+  function renderData() {
+    $('#userName').value = state.user.name || '';
+    $('#userId').textContent = shortId(state.user.id);
+    const last = state.imports[state.imports.length - 1];
+    $('#importHist').textContent = last
+      ? `上次匯入：${dt(last.at)}，來自「${last.name || '未命名'}」（新增 ${last.added}、更新 ${last.updated} 筆）`
+      : '';
+  }
+  $('#userName').onchange = () => { state.user.name = $('#userName').value.trim(); save(); };
+
+  function exportPayload() {
+    return { app: 'FloatingTodo', format: 1, exportedAt: now(),
+      user: { id: state.user.id, name: state.user.name, created: state.user.created },
+      data: { tasks: state.tasks, required: state.required, reqDone: state.reqDone, deleted: state.deleted,
+              theme: state.theme, themeU: state.themeU || 0 } };
+  }
+  $('#exportBtn').onclick = async () => {
+    if (!state.user.name) { $('#userName').focus(); toast('請先輸入使用者名稱', '換電腦匯入時會用名稱和 ID 確認是不是同一個人', 5000); return; }
+    const text = JSON.stringify(exportPayload(), null, 1);
+    const d = new Date();
+    const name = `桌面代辦繼承檔_${state.user.name}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+    if (desktop) {
+      const p = await desktop.saveFile(name, text);
+      if (p) toast('✅ 已匯出繼承檔', p, 6000);
+      return;
+    }
+    // 瀏覽器預覽：無法直接下載，改用複製
+    showModal(`<h3>匯出繼承檔</h3><div class="desc">預覽版無法直接存檔，桌面版會跳出「另存新檔」視窗。以下是檔案內容：</div>
+      <textarea class="field mono" readonly>${esc(text)}</textarea>
+      <div class="row-end"><button class="btn ghost" data-close>關閉</button><button class="btn primary" id="copyExp">複製</button></div>`);
+    $('#copyExp').onclick = async () => { try { await navigator.clipboard.writeText(text); toast('已複製', '', 2000); } catch (e) { toast('無法複製', '請手動選取文字', 3000); } };
+  };
+
+  $('#importBtn').onclick = async () => {
+    if (desktop) { const f = await desktop.openFile(); if (f) handleImport(f.text); }
+    else $('#fileIn').click();
+  };
+  $('#fileIn').onchange = async () => {
+    const f = $('#fileIn').files[0]; $('#fileIn').value = '';
+    if (f) handleImport(await f.text());
+  };
+
+  // 合併：同一筆以 id 判斷，保留較新的修改；刪除紀錄較新者會移除
+  function mergeData(local, inc) {
+    const deleted = Object.assign({}, local.deleted);
+    for (const k in inc.deleted || {}) deleted[k] = Math.max(deleted[k] || 0, inc.deleted[k]);
+    const st = { added: 0, updated: 0, removed: 0, same: 0 };
+    function mergeList(a, b) {
+      const map = new Map(a.map(x => [x.id, x]));
+      (b || []).forEach(x => {
+        const cur = map.get(x.id);
+        if (!cur) { if (!(deleted[x.id] >= (x.u || 0))) { map.set(x.id, x); st.added++; } }
+        else if ((x.u || 0) > (cur.u || 0)) { map.set(x.id, x); st.updated++; }
+        else st.same++;
+      });
+      return [...map.values()].filter(x => {
+        const gone = deleted[x.id] >= (x.u || 0) && deleted[x.id] > 0;
+        if (gone && a.some(y => y.id === x.id)) st.removed++;
+        return !gone;
+      });
+    }
+    const tasks = mergeList(local.tasks, inc.tasks);
+    const required = blankReq();
+    PERIODS.forEach(([k]) => required[k] = mergeList(local.required[k] || [], (inc.required || {})[k]));
+    const reqDone = Object.assign({}, local.reqDone);
+    for (const k in inc.reqDone || {}) if (Math.abs(inc.reqDone[k]) > Math.abs(reqDone[k] || 0)) reqDone[k] = inc.reqDone[k];
+    let theme = local.theme, themeU = local.themeU || 0;
+    if ((inc.themeU || 0) > themeU) { theme = inc.theme; themeU = inc.themeU; }
+    return { result: { tasks, required, reqDone, deleted, theme, themeU }, st };
+  }
+
+  function handleImport(text) {
+    let f;
+    try { f = JSON.parse(text); } catch (e) { toast('無法讀取檔案', '這不是有效的繼承檔', 5000); return; }
+    if (!f || f.app !== 'FloatingTodo' || !f.user || !f.data) { toast('檔案格式不符', '請選擇「桌面代辦」匯出的繼承檔', 5000); return; }
+    const d = f.data;
+    d.tasks = d.tasks || []; d.required = Object.assign(blankReq(), d.required || {});
+    const { result, st } = mergeData(state, d);
+    const same = f.user.id === state.user.id;
+    const localEmpty = countItems(state) === 0;
+    const prev = [...state.imports].reverse().find(x => x.from === f.user.id);
+    let verdict;
+    if (same) verdict = `<div class="verdict ok">✔ 同一位使用者（ID 相符），將合併本機資料與這次匯入的資料。</div>`;
+    else if (localEmpty) verdict = `<div class="verdict ok">✔ 這台電腦還沒有資料，匯入後將沿用「${esc(f.user.name || '未命名')}」的使用者身分。</div>`;
+    else verdict = `<div class="verdict warn">⚠ 使用者 ID 不同：這台電腦已經有「${esc(state.user.name || '未命名')}」的資料。若確認是同一個人（例如換了新電腦又先用了一陣子），可以合併。</div>
+      <label class="confirm"><input type="checkbox" class="chk" id="sameChk">我確認這兩份是同一位使用者的資料，要合併在一起</label>`;
+    showModal(`<h3>匯入繼承資料</h3>
+      <div class="who">
+        <div>繼承檔<b>${esc(f.user.name || '未命名')}</b><span class="mono">${shortId(f.user.id)}</span><br>匯出於 ${dt(f.exportedAt)}</div>
+        <div>這台電腦<b>${esc(state.user.name || '未命名')}</b><span class="mono">${shortId(state.user.id)}</span><br>目前 ${countItems(state)} 筆事項</div>
+      </div>
+      ${verdict}
+      ${prev ? `<div class="desc">上次從這位使用者匯入：${dt(prev.at)}（新增 ${prev.added}、更新 ${prev.updated} 筆）。這次會在上次的結果上繼續合併。</div>` : ''}
+      <div class="lab" style="margin-top:8px">合併結果預覽</div>
+      <div class="stats">
+        <div><b>${st.added}</b>新增</div><div><b>${st.updated}</b>更新</div>
+        <div><b>${st.removed}</b>移除</div><div><b>${countItems(result)}</b>合併後總數</div>
+      </div>
+      ${st.added + st.updated + st.removed === 0 ? '<div class="desc">兩邊的事項已經一致，合併只會同步勾選紀錄。</div>' : ''}
+      <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="doMerge" ${same || localEmpty ? '' : 'disabled'}>合併匯入</button></div>`);
+    const chk = $('#sameChk');
+    if (chk) chk.onchange = () => $('#doMerge').disabled = !chk.checked;
+    $('#doMerge').onclick = () => {
+      Object.assign(state, result);
+      if (!same) {                                   // 確認為同一人 → 統一身分，保留較早建立的
+        const keepInc = localEmpty || (f.user.created || 0) <= (state.user.created || Infinity);
+        const name = state.user.name || f.user.name;
+        if (keepInc) state.user = { id: f.user.id, name: name || f.user.name, created: f.user.created || now() };
+        else state.user.name = name;
+      }
+      state.imports.push({ at: now(), from: f.user.id, name: f.user.name, added: st.added, updated: st.updated });
+      state.imports = state.imports.slice(-10);
+      save(); closeModal();
+      applyVars(document.documentElement, currentTheme()); draft = currentTheme(); selectTarget(target);
+      renderAll(); renderData(); checkReminders();
+      toast('✅ 繼承完成', `新增 ${st.added} 筆、更新 ${st.updated} 筆，共 ${countItems(state)} 筆事項`, 6000);
+    };
+  }
+
+  function showModal(html) { $('#modalBox').innerHTML = html; $('#modal').classList.remove('hidden'); }
+  function closeModal() { $('#modal').classList.add('hidden'); }
+  $('#modal').addEventListener('click', e => { if (e.target.id === 'modal' || e.target.hasAttribute('data-close')) closeModal(); });
+
+  // ================= 更新 =================
+  let up = { state: desktop ? 'idle' : 'preview' };
+  function renderUpdate() {
+    const s = up.state;
+    const txt = {
+      preview: '預覽版不支援更新', idle: '—', checking: '正在檢查…', none: '已是最新版本',
+      available: `發現新版本 v${up.version}`, progress: `下載中 ${Math.round(up.percent || 0)}%`,
+      downloaded: `v${up.version} 已下載，重新啟動即完成更新`, error: `檢查失敗：${up.message || '請確認網路連線'}`
+    }[s] || s;
+    $('#upState').textContent = txt;
+    $('#checkUpBtn').disabled = !desktop || s === 'checking' || s === 'progress';
+    const act = $('#aboutAction');
+    act.classList.toggle('hidden', !['available','downloaded'].includes(s));
+    act.textContent = s === 'available' ? '立即更新' : '重新啟動';
+    // 橫幅
+    const show = ['available','progress','downloaded'].includes(s);
+    $('#upBanner').classList.toggle('hidden', !show);
+    $('#upText').textContent = s === 'available' ? `發現新版本 v${up.version}` : s === 'downloaded' ? `新版本 v${up.version} 已就緒` : '下載更新中…';
+    $('#upBar').classList.toggle('hidden', s !== 'progress');
+    $('#upText').classList.toggle('hidden', s === 'progress' && false);
+    $('#upBar').firstElementChild.style.width = (up.percent || 0) + '%';
+    $('#upAction').classList.toggle('hidden', s === 'progress');
+    $('#upAction').textContent = s === 'available' ? '立即更新' : '重新啟動';
+  }
+  const doUpAction = () => { if (up.state === 'available') desktop.updateDownload(); else if (up.state === 'downloaded') desktop.updateInstall(); };
+  $('#upAction').onclick = doUpAction;
+  $('#aboutAction').onclick = doUpAction;
+  $('#checkUpBtn').onclick = () => { up = { state: 'checking' }; renderUpdate(); desktop.updateCheck(); };
+  if (desktop) {
+    desktop.version().then(v => $('#verText').textContent = 'v' + v);
+    desktop.onUpdate(s => { up = s; renderUpdate(); });
+  } else $('#verText').textContent = '網頁預覽版';
+
+  // ================= 啟動 =================
+  if (desktop && state.pinned) desktop.setPin(true);
+  tick(); renderAll(); renderUpdate(); checkReminders();
+  setInterval(tick, 1000);
+  setInterval(() => {
+    checkReminders();
+    if (!document.querySelector('[contenteditable=true]')) { renderDay(); renderMust(); renderBadges(); }
+  }, 30000);
+})();
+</script>
+</body>
+</html>
