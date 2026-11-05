@@ -1,9 +1,12 @@
 name: Release
 
-# 推送版本標籤（例如 v0.3.1）時，在 Windows 上打包並發布到 GitHub Releases
+# package.json 的 version 有變動並推送到 main 時，
+# 在 Windows 上打包並發布到 GitHub Releases（標籤 v<version> 會自動建立）
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: ['package.json', '.github/workflows/release.yml']
+  workflow_dispatch:
 
 permissions:
   contents: write

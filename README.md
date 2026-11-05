@@ -27,6 +27,5 @@ npm run dist       # 打包 Windows 安裝檔（dist/）
 
 ## 發布新版本
 1. 修改 `package.json` 的 `version`
-2. `npm run dist`
-3. 在 GitHub 建立 Release（tag 例如 `v0.3.1`），上傳 `dist/` 裡的
-   `FloatingTodo-Setup-x.x.x.exe`、`.exe.blockmap`、`latest.yml`
+2. （可選）本機 `npm run dist` 測試打包
+3. 推送到 main，GitHub Actions 會自動在 Windows 上打包並發布 Release
