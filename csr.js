@@ -795,6 +795,14 @@ $("btnSettings").onclick = () => openDlg(d => {
     h("p", "區塊大小：用滑鼠拖曳各區塊之間的分隔條即可調整，雙擊分隔條恢復該區塊的預設大小。顏色請到右上角 ⚙ 設定 → 配色。"), btns);
 });
 
+/* ===== 分類列變成橫向時（視窗較窄），滑鼠滾輪直接左右捲動 ===== */
+$("cats").addEventListener("wheel", e => {
+  const el = e.currentTarget;
+  if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  e.preventDefault();
+  el.scrollLeft += e.deltaY;
+}, { passive: false });
+
 /* ===== 只複製滑鼠選取的文字 ===== */
 const selBtn = $("selBtn");
 const getSel = () => (root.getSelection ? root.getSelection() : window.getSelection());

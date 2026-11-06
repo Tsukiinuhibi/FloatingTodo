@@ -50,6 +50,20 @@
   .prow textarea.pin2{min-height:56px;resize:vertical;line-height:1.5}
   .prow .edcol{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
   .prow .edcol .nb{align-self:flex-start;color:#c8102e}
+  /* 重要注意事項：搜尋 */
+  .imp-search{position:relative;padding:8px 10px 0;background:var(--card);flex-shrink:0}
+  .imp-search input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 30px 6px 30px;font-size:13px}
+  .imp-search input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  .imp-search .mg{position:absolute;left:19px;top:15px;color:var(--muted);pointer-events:none}
+  .imp-search .qx{position:absolute;right:15px;top:12px;border:0;background:transparent;color:var(--muted);width:22px;height:22px;border-radius:5px;font-size:15px;line-height:1;padding:0}
+  .imp-search .qx:hover{background:var(--soft);color:var(--ink)}
+  .sr-head{font-size:12px;color:var(--muted);margin:0 2px 8px}
+  .sr-cat{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted);margin:12px 2px 5px}
+  .sr-cat:first-of-type{margin-top:0}
+  .sr-cat button{border:0;background:none;color:var(--accent);font-size:11px;padding:0;font-weight:600}
+  .sr-kind{font-size:10.5px;font-weight:700;color:var(--muted);background:var(--soft);border-radius:8px;padding:0 6px;flex-shrink:0;margin-top:2px}
+  mark.hl{background:color-mix(in srgb,#ffd84d 70%,var(--card));color:inherit;border-radius:3px;padding:0 1px}
+  .padcard mark.hl{font-weight:inherit}
   .spacer{flex:1}
   .icon{display:grid;place-items:center;width:30px;height:28px;border:0;background:transparent;border-radius:6px;color:var(--bar-dim)}
   .icon:hover{background:color-mix(in srgb,var(--bar-ink) 14%,transparent);color:var(--bar-ink)}
@@ -715,6 +729,11 @@
   <!-- 重要注意事項 -->
   <div class="sheet hidden" id="impSheet">
     <div class="sheet-head"><div class="ph-title">⚠️ 重要注意事項</div><button class="x" data-close-panel title="關閉">×</button></div>
+    <div class="imp-search">
+      <svg class="mg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="text" id="impQ" placeholder="搜尋所有分類的條列事項與記事本" autocomplete="off">
+      <button class="qx hidden" id="impQx" title="清除搜尋（Esc）">×</button>
+    </div>
     <div class="imp-cats" id="impCats"></div>
     <div class="sheet-body" id="impBody"></div>
   </div>
@@ -1957,10 +1976,10 @@
   }
   document.querySelectorAll('[data-close-panel]').forEach(b => b.onclick = () => { if (padOpen) { savePad(true); padOpen = null; } b.closest('.sheet').classList.add('hidden'); });
   $('#coBtn').onclick = () => showPanel('#coSheet');
-  $('#impBtn').onclick = () => { if (padOpen) savePad(true); if (showPanel('#impSheet')) { impNewCat = false; impEdit = null; impRename = false; padOpen = null; renderImp(); } };
+  $('#impBtn').onclick = () => { if (padOpen) savePad(true); if (showPanel('#impSheet')) { impNewCat = false; impEdit = null; impRename = false; padOpen = null; impQ = ''; $('#impQ').value = ''; renderImp(); focusIn('#impQ'); } };
 
   // ================= 重要注意事項：分類 → 條列 / 記事本 =================
-  let impCat = null, impNewCat = false, impEdit = null, impRename = false, impView = 'list', padOpen = null, padTimer = null;
+  let impCat = null, impNewCat = false, impEdit = null, impRename = false, impView = 'list', padOpen = null, padTimer = null, impQ = '';
   const ICO = { copy: ICON_COPY, edit: ICON_EDIT };
   const OKSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   if (!Array.isArray(state.imp.pads)) state.imp.pads = [];
@@ -1968,13 +1987,56 @@
   const RED = /\[\[([\s\S]+?)\]\]/g;
   const plainRed = t => String(t).replace(RED, '$1');
   const redHtml = t => esc(t).replace(/\[\[([\s\S]+?)\]\]/g, '<span class="red">$1</span>');
+  // 搜尋：不分大小寫，紅字標記不算在內
+  const qNorm = s => String(s || '').toLowerCase();
+  const hit = (t, q) => qNorm(plainRed(t)).includes(q);
+  const hlText = (t, q) => {                         // 跳脫後把符合的字包上 <mark>
+    if (!q) return esc(t);
+    const low = qNorm(t); let out = '', i = 0, k;
+    while ((k = low.indexOf(q, i)) >= 0) { out += esc(t.slice(i, k)) + '<mark class="hl">' + esc(t.slice(k, k + q.length)) + '</mark>'; i = k + q.length; }
+    return out + esc(t.slice(i));
+  };
+  const hlRed = (t, q) => {                          // 保留紅字，同時標出搜尋字
+    let out = '', last = 0, m; const re = /\[\[([\s\S]+?)\]\]/g;
+    while ((m = re.exec(t))) { out += hlText(t.slice(last, m.index), q) + '<span class="red">' + hlText(m[1], q) + '</span>'; last = m.index + m[0].length; }
+    return out + hlText(t.slice(last), q);
+  };
+  // 記事本：找出第一個符合的那一行當摘要
+  const padSnippet = (pd, q) => {
+    const lines = (pd.body || '').split('\n'), l = lines.find(x => qNorm(x).includes(q));
+    if (!l) return hlText(lines.find(x => x.trim()) || '空白記事', '');
+    const k = qNorm(l).indexOf(q), a = Math.max(0, k - 24);
+    return (a ? '…' : '') + hlText(l.slice(a), q);
+  };
+  function renderSearch() {
+    const q = qNorm(impQ.trim()), { cats, items, pads } = state.imp;
+    let h = '', nI = 0, nP = 0;
+    cats.forEach(c => {
+      const li = items.filter(i => i.cat === c.id && hit(i.t, q)), lp = pads.filter(p => p.cat === c.id && (qNorm(p.title).includes(q) || qNorm(p.body).includes(q)));
+      const catHit = qNorm(c.name).includes(q);
+      if (!li.length && !lp.length && !catHit) return;
+      nI += li.length; nP += lp.length;
+      h += `<div class="sr-cat">${hlText(c.name, q)}<button data-sr-cat="${c.id}">開啟分類 ›</button></div>`;
+      if (li.length) h += `<div class="pad">${li.filter(i => i.pin).concat(li.filter(i => !i.pin)).map(it => impEdit === it.id
+          ? `<div class="prow" data-iid="${it.id}"><span class="edcol"><textarea class="field pin2" rows="${Math.min(6, it.t.split('\n').length + 1)}">${esc(it.t)}</textarea><button class="nb" data-ia="red" title="先選取文字再按，標成重點紅字">標紅字</button></span><button class="okbtn" data-ia="save" title="編輯完成（Enter；Shift+Enter 換行）">${OKSVG}</button><button class="ni" data-ia="cancel" title="取消">×</button></div>`
+          : `<div class="prow${it.pin ? ' pinned' : ''}" data-iid="${it.id}"><span class="sr-kind">條列</span><span class="pt" title="雙擊編輯">${it.pin ? '<span class="pinb">釘選</span>' : ''}${hlRed(it.t, q)}</span>
+              <span class="acts"><button class="ni" data-ia="copy" title="複製">${ICO.copy}</button><button class="ni${it.pin ? ' on' : ''}" data-ia="pin" title="${it.pin ? '取消釘選' : '釘選到最上方'}">📌</button><button class="ni" data-ia="edit" title="編輯">${ICO.edit}</button><button class="ni danger" data-ia="del" title="刪除">×</button></span></div>`).join('')}</div>`;
+      if (lp.length) h += `<div class="padlist" style="margin-top:6px">${lp.sort((a, b) => b.u - a.u).map(pd => `<button class="padcard" data-pad="${pd.id}"><b>📝 ${hlText(pd.title || '（未命名）', qNorm(pd.title).includes(q) ? q : '')}</b>
+          <span>${padSnippet(pd, q)}</span><small>${dt(pd.u)}</small></button>`).join('')}</div>`;
+    });
+    const head = `<div class="sr-head">搜尋「${esc(impQ.trim())}」：找到 ${nI} 條條列事項、${nP} 篇記事</div>`;
+    return head + (h || `<div class="imp-empty">找不到符合的內容。<br>換個關鍵字試試，或按 Esc 清除搜尋。</div>`);
+  }
   function renderImp() {
     const { cats, items, pads } = state.imp;
     if (!cats.some(c => c.id === impCat)) impCat = cats.length ? cats[0].id : null;
-    $('#impCats').innerHTML = cats.map(c => `<button class="ccat ${impCat === c.id ? 'on' : ''}" data-cat="${c.id}">${esc(c.name)}<span class="n">${items.filter(i => i.cat === c.id).length + pads.filter(i => i.cat === c.id).length}</span></button>`).join('') +
+    $('#impCats').innerHTML = cats.map(c => `<button class="ccat ${impCat === c.id && !(impQ.trim() && !padOpen) ? 'on' : ''}" data-cat="${c.id}">${esc(c.name)}<span class="n">${items.filter(i => i.cat === c.id).length + pads.filter(i => i.cat === c.id).length}</span></button>`).join('') +
       (impNewCat ? `<input class="ccat-in" id="newCatIn" placeholder="分類名稱" maxlength="20">` : `<button class="ccat add" data-cat="new">＋ 新增分類</button>`);
     let h = '';
-    if (!impCat) {
+    $('#impQx').classList.toggle('hidden', !impQ);
+    if (impQ.trim() && !padOpen) {
+      h = renderSearch();
+    } else if (!impCat) {
       h = `<div class="imp-empty">還沒有分類。<br>先建立一個分類（例如「客戶相關」「電腦設定」），<br>再在裡面逐條記錄或寫記事本。<br><br><button class="btn primary" data-cat-new>＋ 建立第一個分類</button></div>`;
     } else if (padOpen) {
       const pd = pads.find(x => x.id === padOpen);
@@ -2026,8 +2088,19 @@
   $('#impBody').addEventListener('input', e => {
     if (e.target.id === 'padTitle' || e.target.id === 'padBody') { clearTimeout(padTimer); padTimer = setTimeout(() => savePad(false), 600); }
   });
+  // 分類列：滑鼠滾輪直接左右捲動
+  $('#impCats').addEventListener('wheel', e => {
+    const el = e.currentTarget;
+    if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    e.preventDefault(); el.scrollLeft += e.deltaY;
+  }, { passive: false });
+  $('#impQ').addEventListener('input', () => { if (padOpen) { savePad(true); padOpen = null; } impQ = $('#impQ').value; impEdit = null; renderImp(); });
+  $('#impQ').addEventListener('keydown', e => { if (e.key === 'Escape' && impQ) { e.preventDefault(); clearImpQ(); } });
+  $('#impQx').onclick = () => { clearImpQ(); $('#impQ').focus(); };
+  function clearImpQ() { impQ = ''; $('#impQ').value = ''; impEdit = null; renderImp(); }
   $('#impCats').addEventListener('click', e => {
     const b = e.target.closest('[data-cat]'); if (!b) return;
+    if (impQ) { impQ = ''; $('#impQ').value = ''; }
     if (padOpen) savePad(true);
     if (b.dataset.cat === 'new') { impNewCat = true; renderImp(); return; }
     impCat = b.dataset.cat; impEdit = null; impRename = false; padOpen = null; renderImp();
@@ -2042,7 +2115,8 @@
     const t = e.target;
     if (t.closest('[data-cat-new]')) { impNewCat = true; renderImp(); return; }
     const vw = t.closest('[data-view]'); if (vw) { impView = vw.dataset.view; impEdit = null; renderImp(); return; }
-    const pc = t.closest('[data-pad]'); if (pc) { padOpen = pc.dataset.pad; renderImp(); const pb = $('#padBody'); pb.focus(); pb.setSelectionRange(pb.value.length, pb.value.length); return; }
+    const sc = t.closest('[data-sr-cat]'); if (sc) { impCat = sc.dataset.srCat; impQ = ''; $('#impQ').value = ''; impEdit = null; impView = 'list'; renderImp(); return; }
+    const pc = t.closest('[data-pad]'); if (pc) { padOpen = pc.dataset.pad; const pp = state.imp.pads.find(x => x.id === padOpen); if (pp) impCat = pp.cat; renderImp(); const pb = $('#padBody'); pb.focus(); pb.setSelectionRange(pb.value.length, pb.value.length); return; }
     const pa = t.closest('[data-pa]');
     if (pa) {
       const a = pa.dataset.pa, pd = state.imp.pads.find(x => x.id === padOpen);
