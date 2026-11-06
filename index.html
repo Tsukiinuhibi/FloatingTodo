@@ -204,8 +204,12 @@
   .item{flex-wrap:wrap}
   .item .body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
   .item .sub-meta{align-self:flex-start;font-weight:500}
-  .note-pv{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-  .note-pv:hover{color:var(--accent)}
+  .note-pvs{display:flex;flex-direction:column;gap:1px;margin-top:2px;cursor:pointer;border-left:2px solid var(--accent-soft);padding-left:6px}
+  .note-pvs:hover{border-left-color:var(--accent)}
+  .note-pv{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.45}
+  .note-pv .pvn{display:inline-block;min-width:12px;margin-right:4px;font-size:10px;color:var(--accent);font-weight:700}
+  .note-pvs:hover .note-pv{color:var(--ink)}
+  .note-more{font-size:11px;color:var(--accent);padding-left:16px;line-height:1.45}
   .stbtn{border:0;background:transparent;color:var(--muted);width:22px;height:22px;border-radius:5px;flex-shrink:0;display:grid;place-items:center;opacity:0}
   .item:hover .stbtn{opacity:.75}
   .stbtn:hover{background:var(--soft);opacity:1}
@@ -1104,7 +1108,8 @@
   const notesOf = x => Array.isArray(x.notes) ? x.notes : [];
   function itemBody(x, sub = '') {
     const ns = notesOf(x);
-    const pv = ns.length ? `<div class="note-pv" data-nt title="點開備註">📝 ${ns.length > 1 ? `${ns.length} 條・` : ''}${esc(ns[0].t)}</div>` : '';
+    // 預設顯示前兩條，其餘收合
+    const pv = ns.length ? `<div class="note-pvs" data-nt title="點開全部備註">${ns.slice(0, 2).map((n, i) => `<div class="note-pv"><span class="pvn">${i + 1}</span>${esc(n.t)}</div>`).join('')}${ns.length > 2 ? `<div class="note-more">⋯ 還有 ${ns.length - 2} 條，點開查看</div>` : ''}</div>` : '';
     return `<div class="body"><span class="text" title="雙擊可編輯">${esc(x.text)}</span>${sub ? `<span class="meta sub-meta">${sub}</span>` : ''}${pv}</div>`;
   }
   const noteBtn = x => { const n = notesOf(x).length; return `<button class="nbtn ${n ? 'has' : ''} ${noteOpen === x.id ? 'open' : ''}" title="${n ? `備註（${n} 條）` : '新增備註'}">${NOTE_ICON}</button>`; };
