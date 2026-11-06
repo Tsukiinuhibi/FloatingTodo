@@ -1,4 +1,8 @@
 const { app, BrowserWindow, ipcMain, Notification, screen, dialog, desktopCapturer, safeStorage, shell } = require('electron');
+
+// 顯示名稱。內部名稱（package.json 的 productName = FloatingTodo）不能改：
+// 它決定資料夾 %APPDATA%\FloatingTodo，改了舊的代辦資料就讀不到。
+const APP_NAME = '上班便利小工具';
 const path = require('path');
 const fs = require('fs');
 
@@ -16,7 +20,7 @@ function createWindow() {
     minWidth: 340, minHeight: 460,
     frame: false, resizable: true, alwaysOnTop: false,
     backgroundColor: '#f7f5f0',
-    title: '桌面代辦',
+    title: APP_NAME,
     icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -129,6 +133,7 @@ async function sendBackupMail(text, isTest = false) {
   const name = (data.user && data.user.name) || '';
   const d = data.data || {};
   const count = (d.tasks || []).length + Object.values(d.required || {}).reduce((n, a) => n + a.length, 0);
+  const csrCount = ((d.csr && d.csr.categories) || []).reduce((n, c) => n + (c.items || []).length, 0);
   const server = c.provider === 'custom'
     ? { host: c.host, port: +c.port || 465, secure: !!c.secure }
     : { host: 'smtp.gmail.com', port: 465, secure: true };
@@ -137,22 +142,23 @@ async function sendBackupMail(text, isTest = false) {
     const t = nodemailer.createTransport({ ...server, auth: { user: c.user, pass: decPass(c.pass) },
       connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000 });
     await t.sendMail({
-      from: `"桌面代辦" <${c.user}>`,
+      from: `"${APP_NAME}" <${c.user}>`,
       to: c.to,
-      subject: `${isTest ? '[測試] ' : ''}[桌面代辦備份] ${name ? name + ' ' : ''}${stamp()}`,
+      subject: `${isTest ? '[測試] ' : ''}[${APP_NAME}備份] ${name ? name + ' ' : ''}${stamp()}`,
       text: [
-        `這是「桌面代辦」${isTest ? '的測試備份信' : '在關閉時自動寄出的備份'}。`,
+        `這是「${APP_NAME}」${isTest ? '的測試備份信' : '在關閉時自動寄出的備份'}。`,
         '',
         `使用者：${name || '未命名'}`,
         `備份時間：${stamp()}`,
         `事項數量：${count} 筆`,
+        `客服文本：${csrCount} 段`,
         '',
         '【如何還原】',
         '1. 下載這封信的附件（.json 檔）',
-        '2. 開啟桌面代辦 → 右上角 ⚙ 設定 → 繼承 → 選擇繼承檔匯入',
+        `2. 開啟${APP_NAME} → 右上角 ⚙ 設定 → 繼承 → 選擇繼承檔匯入`,
         '3. 確認使用者後按「合併匯入」',
       ].join('\n'),
-      attachments: [{ filename: `桌面代辦繼承檔_${safeName(name) || '備份'}_${stamp(new Date(), false)}.json`, content: text, contentType: 'application/json' }]
+      attachments: [{ filename: `${APP_NAME}繼承檔_${safeName(name) || '備份'}_${stamp(new Date(), false)}.json`, content: text, contentType: 'application/json' }]
     });
     const n = loadCfg(); n.lastSent = Date.now(); saveCfg(n);
     return { ok: true };
@@ -178,7 +184,7 @@ ipcMain.handle('save-file', async (_e, { name, text }) => {
   const r = await dialog.showSaveDialog(win, {
     title: '匯出繼承檔',
     defaultPath: path.join(app.getPath('documents'), name.replace(/[\\/:*?"<>|]/g, '_')),
-    filters: [{ name: '桌面代辦繼承檔', extensions: ['json'] }]
+    filters: [{ name: `${APP_NAME}繼承檔`, extensions: ['json'] }]
   });
   if (r.canceled || !r.filePath) return null;
   fs.writeFileSync(r.filePath, text, 'utf8');
@@ -188,10 +194,42 @@ ipcMain.handle('open-file', async () => {
   const r = await dialog.showOpenDialog(win, {
     title: '選擇繼承檔',
     properties: ['openFile'],
-    filters: [{ name: '桌面代辦繼承檔', extensions: ['json'] }]
+    filters: [{ name: `${APP_NAME}繼承檔`, extensions: ['json'] }]
   });
   if (r.canceled || !r.filePaths[0]) return null;
   return { name: path.basename(r.filePaths[0]), text: fs.readFileSync(r.filePaths[0], 'utf8') };
+});
+
+// ---------- 客服回覆文本：資料檔（userData/csr-data.json） ----------
+// 同步讀寫（介面一修改就存），先寫暫存檔再改名，避免寫到一半斷電把檔案弄壞
+const csrPath = () => path.join(app.getPath('userData'), 'csr-data.json');
+ipcMain.on('csr-load', e => {
+  try { e.returnValue = fs.readFileSync(csrPath(), 'utf8'); } catch (err) { e.returnValue = null; }
+});
+ipcMain.on('csr-save', (e, json) => {
+  try {
+    const tmp = csrPath() + '.tmp';
+    fs.writeFileSync(tmp, json, 'utf8');
+    fs.renameSync(tmp, csrPath());
+    e.returnValue = true;
+  } catch (err) { e.returnValue = false; }
+});
+// 讀取失敗的資料檔先留一份，不要被新的內容蓋掉
+ipcMain.on('csr-keep-broken', e => {
+  try { fs.copyFileSync(csrPath(), csrPath().replace(/\.json$/, `_讀取失敗_${stamp(new Date(), false)}.json`)); } catch (err) {}
+  e.returnValue = true;
+});
+ipcMain.handle('csr-save-txt', async (_e, { name, text }) => {
+  try {
+    const r = await dialog.showSaveDialog(win, {
+      title: '匯出客服回覆文本備份',
+      defaultPath: path.join(app.getPath('documents'), safeName(name)),
+      filters: [{ name: '文字檔', extensions: ['txt'] }]
+    });
+    if (r.canceled || !r.filePath) return { status: 'canceled' };
+    fs.writeFileSync(r.filePath, text, 'utf8');
+    return { status: 'saved', path: r.filePath };
+  } catch (err) { return { status: 'error', error: String(err && err.message || err).slice(0, 120) }; }
 });
 
 // ---------- 螢幕滴管：擷取游標所在螢幕，開全螢幕取色層 ----------
