@@ -94,6 +94,21 @@
   .hol-info b{color:var(--hol);font-weight:600}
   .hol-day{font-size:12px;margin:-4px 2px 8px;padding:6px 9px;border-radius:8px;background:color-mix(in srgb,var(--hol) 11%,var(--card));color:color-mix(in srgb,var(--hol) 85%,var(--ink))}
   .hol-day.work{background:var(--soft);color:var(--muted)}
+  .day .dot.sp{left:4px;right:auto;background:#7c5cff}
+  .more2{border:0;background:transparent;color:var(--muted);width:22px;height:22px;border-radius:5px;flex-shrink:0;font-size:15px;line-height:1;letter-spacing:-1px;opacity:.6}
+  .more2:hover,.more2.open{background:var(--soft);opacity:1;color:var(--ink)}
+  .imenu{position:absolute;z-index:9;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px;min-width:120px;animation:pop .15s ease}
+  .imenu button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;text-align:left;padding:7px 10px;border-radius:7px;font-size:13px}
+  .imenu button:hover{background:var(--soft)}
+  .imenu button.danger{color:var(--warn)}
+  .imenu button.danger:hover{background:var(--warn-soft)}
+  .erow{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:13px;flex-wrap:wrap}
+  .erow > .el{width:56px;color:var(--muted);flex-shrink:0}
+  .erow input[type=text],.erow .grow{flex:1;min-width:0}
+  .erow input,.erow select{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:5px 7px;font-size:13px}
+  .erow input[type=number]{width:60px}
+  .btn.danger{background:var(--warn);color:#fff}
+  .sp-ico{width:18px;text-align:center;flex-shrink:0;font-size:13px}
   .must-sec{margin-top:14px}
   .must-sec h2{font-size:14px}
   #planMust .item{border-style:dashed;border-left-style:solid}
@@ -735,7 +750,7 @@
     if (p === 'monthly') return [`${y} 年 ${m+1} 月`, '每月 1 日自動重置｜可設定日期範圍，設定時間則在最後一天到期前 1 小時提醒'];
     if (p === 'quarterly') { const q = Math.floor(m/3); return [`${y} 年第 ${q+1} 季（${q*3+1}–${q*3+3} 月）`, '每季第一天自動重置勾選']; }
     if (p === 'irregular') return ['不定期', '週期性：每 N 天／週／個月重複，每期自動重置｜一次性：單日、跳日（多個日期）或一段期間，做完就結束｜設定時間會在到期前 1 小時提醒'];
-    if (p === 'halfyear') return ['半年・每 6 個月一期', '每筆可指定起始月份，例如 3 月起：3–8 月、9 月–隔年 2 月各為一期，每期開始時自動重置'];
+    if (p === 'halfyear') return ['半年・每 6 個月一期', '每筆可指定起始年月日，例如 2026/03/15 起：3/15–9/14、9/15–隔年 3/14 各為一期，每期開始時自動重置'];
     return [`${y} 年`, '每年 1 月 1 日自動重置勾選'];
   }
 
@@ -754,6 +769,7 @@
     if (a > b) [a, b] = [b, a];
     return [a, b];
   }
+  const fmtYMD = s => s.replace(/-/g, '/');
   const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
   const addMonths = (d, n) => { const y = d.getFullYear(), m = d.getMonth() + n; return new Date(y, m, Math.min(d.getDate(), new Date(y, m + 1, 0).getDate())); };
   const dayDiff = (a, b) => Math.round((b - a) / 864e5);
@@ -774,6 +790,7 @@
   }
   // 半年：從起始月份起每 6 個月一期
   function halfCycle(r, n = new Date()) {
+    if (r.start) return irrCycle({ start: r.start, every: 6, unit: 'month' }, n);   // 指定起始日期：每 6 個月一期
     const k = (n.getMonth() - ((+r.startMonth || 1) - 1) + 12) % 12, off = k < 6 ? k : k - 6;
     const s = new Date(n.getFullYear(), n.getMonth() - off, 1);
     return { start: s, end: new Date(s.getFullYear(), s.getMonth() + 6, 0) };
@@ -789,11 +806,28 @@
     return { start: parseD(pick), end: parseD(pick), key: pick, dates: ds, doneN: ds.filter(done).length };
   }
   const irrSpan = r => isOnce(r) ? onceOcc(r) : irrCycle(r);
+  function occursOn(r, k, d) {
+    if (k === 'irregular' && isOnce(r)) {
+      if (r.once === 'day') return r.date === d;
+      if (r.once === 'dates') return (r.dates || []).includes(d);
+      return d >= r.rangeStart && d <= r.rangeEnd;
+    }
+    let st, N, unit;
+    if (k === 'irregular') { st = r.start; N = Math.max(1, +r.every || 1); unit = r.unit || 'day'; }
+    else if (k === 'halfyear') {
+      if (!r.start) return fmt(halfCycle(r, parseD(d)).start) === d;
+      st = r.start; N = 6; unit = 'month';
+    } else return false;
+    if (!st || d < st) return false;
+    const a = parseD(st), t = parseD(d);
+    if (unit === 'month') { const m = (t.getFullYear() - a.getFullYear()) * 12 + t.getMonth() - a.getMonth(); return m % N === 0 && fmt(addMonths(a, m)) === d; }
+    return dayDiff(a, t) % (N * (unit === 'week' ? 7 : 1)) === 0;
+  }
   function reqKey(r, p) {
     if (p === 'irregular' && isOnce(r)) return `${r.id}|${onceOcc(r).key}`;
     if (p === 'weekly' && hasDays(r)) return `${r.id}|${fmt(weeklyOcc(r))}`;
     if (p === 'irregular') { const c = irrCycle(r); return `${r.id}|${c.before ? 'pre' : fmt(c.start)}`; }
-    if (p === 'halfyear') return `${r.id}|H${fmt(halfCycle(r).start)}`;
+    if (p === 'halfyear') { const c = halfCycle(r); return `${r.id}|H${c.before ? 'pre' : fmt(c.start)}`; }
     return `${r.id}|${periodKey(p)}`;
   }
   const isReqDone = (r, p) => (state.reqDone[reqKey(r, p)] || 0) > 0;   // 正數＝勾選時間，負數＝取消時間
@@ -866,7 +900,7 @@
   let must = 'daily';
   let wdSel = [], mFrom = '', mTo = '';
   let iKind = 'cycle', iOnce = 'day', oDate = '', oDates = [], oFrom = '', oTo = '';
-  let iEvery = '1', iUnit = 'day', iStart = '', hMonth = String(new Date().getMonth() + 1);
+  let iEvery = '1', iUnit = 'day', iStart = '', hStart = '';
   let noteOpen = null, noteEdit = null;
 
   function tick() {
@@ -910,7 +944,9 @@
       return ['active', `剩 ${left + 1} 天`];
     }
     if (p === 'halfyear') {
-      const left = dayDiff(parseD(today), halfCycle(r).end);
+      const hc = halfCycle(r);
+      if (hc.before) return ['later', `${md(hc.start)} 開始`];
+      const left = dayDiff(parseD(today), hc.end);
       if (left === 0) return ['today', '今天截止'];
       return ['active', left < 31 ? `剩 ${left + 1} 天` : `至 ${md(halfCycle(r).end)}`];
     }
@@ -942,7 +978,11 @@
       const span = c.before ? `${md(c.start)} 起` : `${md(c.start)}–${md(c.end)}`;
       return `${every}・${span}` + (r.time ? ` ${r.time}` : '');
     }
-    if (p === 'halfyear') { const c = halfCycle(r); return `${r.startMonth} 月起・${c.start.getMonth()+1}–${c.end.getMonth()+1} 月`; }
+    if (p === 'halfyear') {
+      const c = halfCycle(r);
+      if (r.start) return c.before ? `每半年・${fmtYMD(r.start)} 起` : `每半年・${md(c.start)}–${md(c.end)}`;
+      return `${r.startMonth} 月起・${c.start.getMonth()+1}–${c.end.getMonth()+1} 月`;
+    }
     if (p === 'monthly' && (r.from || r.to || r.time)) {
       const g = mRange(r);
       return (r.from || r.to ? (g[0] === g[1] ? `${g[0]} 日` : `${g[0]}–${g[1]} 日`) : '月底') + (r.time ? ` ${r.time}` : '');
@@ -968,7 +1008,8 @@
       const hi = state.holShow !== false ? dayInfo(k) : { off: false, name: '' };
       const cls = ['day', d.getMonth() !== m && 'other', k === today && 'today', k === selDate && 'sel', hi.name && hi.off && 'off', hi.work && 'work'].filter(Boolean).join(' ');
       const tip = hi.name ? ` title="${esc(hi.name)}"` : '';
-      h += `<button class="${cls}" data-date="${k}"${tip}><span>${d.getDate()}</span>${hi.name ? `<span class="hl">${esc(shortName(hi.name))}</span>` : ''}${c ? `<i class="dot ${c.open ? '' : 'done'}"></i>` : ''}</button>`;
+      const sp = SPECIAL.some(([sk]) => state.required[sk].some(r => occursOn(r, sk, k)));
+      h += `<button class="${cls}" data-date="${k}"${tip}><span>${d.getDate()}</span>${hi.name ? `<span class="hl">${esc(shortName(hi.name))}</span>` : ''}${c ? `<i class="dot ${c.open ? '' : 'done'}"></i>` : ''}${sp ? '<i class="dot sp" title="有不定期／半年事項"></i>' : ''}</button>`;
     }
     $('#calGrid').innerHTML = h;
     renderHolInfo();
@@ -1018,17 +1059,31 @@
         <span class="time">${t.time || '全天'}</span>
         ${itemBody(t)}
         ${st ? `<span class="tag">${tagText[st]}</span>` : ''}
-        ${starBtn(t)}${noteBtn(t)}<button class="del" title="刪除">×</button>${notePanel(t)}</li>`;
+        ${starBtn(t)}${noteBtn(t)}<button class="more2" title="編輯／複製／刪除">⋯</button>${notePanel(t)}</li>`;
     }).join('') : `<li class="empty">這天還沒有安排，從上方新增吧</li>`;
     renderPlanMust();
   }
   // 行程頁顯示今天還沒完成的必做事項（勾選完成後就不再顯示）
   function renderPlanMust() {
-    const show = selDate === today;
+    const isToday = selDate === today;
     const rows = [];
-    if (show) ALLP.forEach(([k, n]) => state.required[k].forEach(r => { if (isOpen(r, k)) rows.push([k, n, r]); }));
+    if (isToday) {
+      ALLP.forEach(([k, n]) => state.required[k].forEach(r => { if (isOpen(r, k)) rows.push([k, n, r]); }));
+      // 今天剛好輪到、但還沒開始計算的不定期／半年也列出
+      SPECIAL.forEach(([k, n]) => state.required[k].forEach(r => { if (!rows.some(x => x[2] === r) && occursOn(r, k, today) && !isReqDone(r, k)) rows.push([k, n, r]); }));
+    } else {
+      SPECIAL.forEach(([k, n]) => state.required[k].forEach(r => { if (occursOn(r, k, selDate)) rows.push([k, n, r]); }));
+    }
     $('#mustSecHead').classList.toggle('hidden', !rows.length);
-    $('#mustSecCnt').textContent = rows.length ? `${rows.length} 項未完成` : '';
+    $('#mustSecHead h2').textContent = isToday ? '📌 今天的必做事項' : '📌 這天的不定期／半年事項';
+    $('#mustSecCnt').textContent = rows.length ? (isToday ? `${rows.length} 項未完成` : `${rows.length} 項`) : '';
+    if (!isToday) {
+      const future = selDate > today;
+      $('#planMust').innerHTML = rows.map(([k, n, r]) => `<li class="item" data-id="${r.id}" data-p="${k}">
+        <span class="sp-ico">📅</span><span class="meta">${n}</span>${itemBody(r, reqMeta(r, k))}
+        <span class="tag" style="background:var(--soft);color:var(--muted)">${future ? '預定' : '當天'}</span></li>`).join('');
+      return;
+    }
     $('#planMust').innerHTML = rows.map(([k, n, r]) => {
       const [st, tag] = reqStatus(r, k, false), meta = reqMeta(r, k);
       return `<li class="item ${st}" data-id="${r.id}" data-p="${k}">
@@ -1090,7 +1145,7 @@
         ${meta && meta.length <= 12 ? `<span class="meta">${meta}</span>` : ''}
         ${itemBody(r, meta && meta.length > 12 ? meta : '')}
         ${tag ? `<span class="tag">${tag}</span>` : ''}
-        ${starBtn(r)}${noteBtn(r)}<button class="del" title="刪除">×</button>${notePanel(r)}</li>`;
+        ${starBtn(r)}${noteBtn(r)}<button class="more2" title="編輯／複製／刪除">⋯</button>${notePanel(r)}</li>`;
     }).join('') : `<li class="empty">還沒有${pName(must)}必辦事項</li>`;
   }
   function renderOpts() {
@@ -1120,8 +1175,8 @@
       }
       el.innerHTML = h;
     } else if (must === 'halfyear') {
-      el.innerHTML = `<span>起始月份</span><select id="hMonth">${Array.from({length: 12}, (_, i) => `<option value="${i+1}" ${String(i+1) === hMonth ? 'selected' : ''}>${i+1} 月</option>`).join('')}</select>
-        <span class="note">例如選 3 月：3–8 月、9 月–隔年 2 月各算一期</span>`;
+      el.innerHTML = `<span>起始日期</span><input type="date" id="hStart" value="${hStart || today}">
+        <span class="note">從這天起每 6 個月一期，例如 2026/03/15 起：3/15–9/14、9/15–隔年 3/14</span>`;
     } else el.innerHTML = '';
     el.classList.toggle('hidden', !el.innerHTML);
   }
@@ -1366,7 +1421,7 @@
     selDate = b.dataset.date;
     const d = parseD(selDate);
     if (d.getMonth() !== view.getMonth() || d.getFullYear() !== view.getFullYear()) { view = new Date(d); view.setDate(1); }
-    renderCal(); renderDay(); $('#taskText').focus();
+    renderCal(); renderDay(); $('#taskText')._quiet = true; $('#taskText').focus();
   };
   $('#addTask').onsubmit = e => {
     e.preventDefault();
@@ -1383,7 +1438,7 @@
     if (starClick(e, t, renderDay)) return;
     if (noteClick(e, t, renderDay)) return;
     if (e.target.classList.contains('chk')) { t.done = e.target.checked; t.u = now(); save(); renderAll(); }
-    if (e.target.classList.contains('del')) { state.deleted[t.id] = now(); state.tasks = state.tasks.filter(x => x !== t); save(); renderAll(); }
+    const mb = e.target.closest('.more2'); if (mb) openItemMenu(mb, 'task', t.id);
   });
   $('#planMust').addEventListener('click', e => {
     const li = e.target.closest('.item'); if (!li) return;
@@ -1424,7 +1479,7 @@
     if (e.target.id === 'mTo') mTo = e.target.value;
     if (e.target.id === 'iUnit') iUnit = e.target.value;
     if (e.target.id === 'iStart') iStart = e.target.value;
-    if (e.target.id === 'hMonth') hMonth = e.target.value;
+    if (e.target.id === 'hStart') hStart = e.target.value;
     if (e.target.id === 'oDate') oDate = e.target.value;
     if (e.target.id === 'oFrom') { oFrom = e.target.value; if (!oTo || oTo < oFrom) { oTo = oFrom; renderOpts(); } }
     if (e.target.id === 'oTo') oTo = e.target.value;
@@ -1440,7 +1495,7 @@
     $(`#${k}NoteDone`).onclick = () => {                 // 編輯完成：收合備註區，保留已輸入的條目
       const v = inp.value.trim(); if (v) { pend[k].push(v); inp.value = ''; renderPend(k); }
       wrap.classList.add('hidden'); tg.classList.remove('on'); pendBadge(k);
-      $(`#${k}Text`).focus();
+      $(`#${k}Text`)._quiet = true; $(`#${k}Text`).focus();
     };
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addOne(); } });
     list.addEventListener('input', e => { if (e.target.dataset.i != null) pend[k][+e.target.dataset.i] = e.target.value; });
@@ -1478,12 +1533,12 @@
       }
       if (iOnce === 'range') { const a = oFrom || today, b = oTo || a; [it.rangeStart, it.rangeEnd] = a <= b ? [a, b] : [b, a]; }
     } else if (must === 'irregular') { it.kind = 'cycle'; it.every = Math.max(1, parseInt(iEvery) || 1); it.unit = iUnit; it.start = iStart || today; it.time = tm; }
-    if (must === 'halfyear') it.startMonth = +hMonth;
+    if (must === 'halfyear') { it.start = hStart || today; it.startMonth = parseD(it.start).getMonth() + 1; }
     it.notes = takePend('must');
     state.required[must].push(it);
     remember(text, it.time);
     $('#mustText').value = ''; $('#mustTime').value = '';
-    wdSel = []; mFrom = ''; mTo = ''; iEvery = '1'; iStart = ''; oDate = ''; oDates = []; oFrom = ''; oTo = '';
+    wdSel = []; mFrom = ''; mTo = ''; iEvery = '1'; iStart = ''; hStart = ''; oDate = ''; oDates = []; oFrom = ''; oTo = '';
     save(); renderAll(); checkReminders(); $('#mustText').focus();
   };
   $('#mustList').addEventListener('click', e => {
@@ -1495,7 +1550,7 @@
       if (e.target.checked) { e.target.checked = false; confirmDone(r, must); }
       else { state.reqDone[reqKey(r, must)] = -now(); save(); renderAll(); }
     }
-    if (e.target.classList.contains('del')) { state.deleted[r.id] = now(); state.required[must] = state.required[must].filter(x => x !== r); save(); renderAll(); }
+    const mb = e.target.closest('.more2'); if (mb) openItemMenu(mb, 'req', r.id, must);
   });
   $('#mustList').addEventListener('dblclick', e => {
     const li0 = e.target.closest('.item'); const r0 = li0 && state.required[must].find(x => x.id === li0.dataset.id);
@@ -1545,7 +1600,7 @@
       box.querySelectorAll('.sg').forEach((el, i) => el.classList.toggle('on', i === idx));
       const el = box.querySelector('.sg.on'); if (el) el.scrollIntoView({ block: 'nearest' });
     }
-    input.addEventListener('focus', render);
+    input.addEventListener('focus', () => { if (input._quiet) { input._quiet = false; return; } render(); });
     input.addEventListener('click', () => { if (box.classList.contains('hidden')) render(); });
     input.addEventListener('input', () => { idx = -1; render(); });
     input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) hide(); }, 120));
@@ -1566,6 +1621,110 @@
   }
   setupSuggest($('#taskText'), $('#taskTime'), () => true);
   setupSuggest($('#mustText'), $('#mustTime'), () => must === 'daily' || (must === 'weekly' && wdSel.length > 0) || must === 'monthly' || must === 'irregular');
+
+  // ================= 事項選單：編輯／複製／刪除 =================
+  function closeMenu() { document.querySelectorAll('.imenu').forEach(m => m.remove()); document.querySelectorAll('.more2.open').forEach(b => b.classList.remove('open')); }
+  document.addEventListener('mousedown', e => { if (!e.target.closest('.imenu') && !e.target.closest('.more2')) closeMenu(); });
+  function findItem(kind, id, p) { return kind === 'task' ? state.tasks.find(x => x.id === id) : state.required[p].find(x => x.id === id); }
+  function openItemMenu(btn, kind, id, p) {
+    const wasOpen = btn.classList.contains('open'); closeMenu(); if (wasOpen) return;
+    btn.classList.add('open');
+    const m = document.createElement('div'); m.className = 'imenu';
+    m.innerHTML = `<button data-m="edit">✏️ 編輯</button><button data-m="copy">📄 複製</button><button data-m="del" class="danger">🗑️ 刪除</button>`;
+    const app = $('#app'); app.appendChild(m);
+    const r = btn.getBoundingClientRect(), a = app.getBoundingClientRect();
+    m.style.right = (a.right - r.right) + 'px';
+    const below = r.bottom - a.top + 4;
+    m.style.top = (below + m.offsetHeight > a.height - 6 ? r.top - a.top - m.offsetHeight - 4 : below) + 'px';
+    m.onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; closeMenu(); itemAction(b.dataset.m, kind, id, p); };
+  }
+  const itemDesc = (kind, x, p) => kind === 'task' ? `行程・${md(parseD(x.date))}（${WD[parseD(x.date).getDay()]}）${x.time ? ' ' + x.time : ''}` : `${pName(p)}必做${reqMeta(x, p) ? '・' + reqMeta(x, p) : ''}`;
+  const cloneNotes = x => notesOf(x).map(n => ({ id: uid(), t: n.t }));
+  function itemAction(act, kind, id, p) {
+    const x = findItem(kind, id, p); if (!x) return;
+    if (act === 'del') {
+      showModal(`<h3>確定刪除？</h3><div class="confirm-item">${esc(x.text)}<small>${esc(itemDesc(kind, x, p))}${notesOf(x).length ? `・${notesOf(x).length} 條備註` : ''}</small></div>
+        <div class="desc">刪除後就無法復原。</div>
+        <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn danger" id="delOk">🗑️ 刪除</button></div>`);
+      $('#delOk').onclick = () => {
+        state.deleted[x.id] = now();
+        if (kind === 'task') state.tasks = state.tasks.filter(v => v !== x); else state.required[p] = state.required[p].filter(v => v !== x);
+        save(); closeModal(); renderAll(); toast('已刪除', x.text, 2500);
+      };
+      return;
+    }
+    if (act === 'copy') {
+      if (kind === 'task') {
+        showModal(`<h3>複製行程</h3><div class="confirm-item">${esc(x.text)}</div>
+          <div class="erow"><span class="el">複製到</span><input type="date" id="cpDate" value="${x.date}"><input type="time" id="cpTime" value="${x.time || ''}"></div>
+          ${notesOf(x).length ? `<label class="check-row"><input type="checkbox" class="chk" id="cpNotes" checked><span>連同 ${notesOf(x).length} 條備註一起複製</span></label>` : ''}
+          <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="cpOk">複製</button></div>`);
+        $('#cpOk').onclick = () => {
+          const date = $('#cpDate').value || x.date;
+          state.tasks.push({ id: uid(), date, time: $('#cpTime').value, text: x.text, notes: $('#cpNotes') && !$('#cpNotes').checked ? [] : cloneNotes(x), done: false, u: now() });
+          save(); closeModal(); renderAll(); toast('📄 已複製', `${x.text} → ${md(parseD(date))}`, 3000);
+        };
+      } else {
+        const c = JSON.parse(JSON.stringify(x)); c.id = uid(); c.u = now(); c.notes = cloneNotes(x); c.star = false;
+        const arr = state.required[p]; arr.splice(arr.indexOf(x) + 1, 0, c);
+        save(); renderAll(); toast('📄 已複製一份', x.text, 2500);
+        itemAction('edit', 'req', c.id, p);
+      }
+      return;
+    }
+    if (act === 'edit') openEdit(kind, x, p);
+  }
+  // 編輯視窗
+  function openEdit(kind, x, p) {
+    let body = `<div class="erow"><span class="el">內容</span><input type="text" id="eText" value="${esc(x.text)}"></div>`;
+    const timeRow = (label = '時間') => `<div class="erow"><span class="el">${label}</span><input type="time" id="eTime" value="${x.time || ''}"><span class="sub">可留空</span></div>`;
+    let eDays = [...(x.days || [])], eDates = [...(x.dates || [])];
+    if (kind === 'task') body += `<div class="erow"><span class="el">日期</span><input type="date" id="eDate" value="${x.date}"></div>` + timeRow();
+    else if (p === 'daily') body += timeRow();
+    else if (p === 'weekly') body += `<div class="erow"><span class="el">週幾</span><span id="eWd">${WD_ORDER.map(d => `<button type="button" class="wd ${eDays.includes(d) ? 'on' : ''}" data-ewd="${d}">${WD[d]}</button>`).join(' ')}</span></div>` + timeRow();
+    else if (p === 'monthly') {
+      const opt = v => '<option value="">—</option>' + Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}" ${i + 1 === v ? 'selected' : ''}>${i + 1}</option>`).join('');
+      body += `<div class="erow"><span class="el">日期</span>從<select id="eFrom">${opt(x.from)}</select>日 到<select id="eTo">${opt(x.to)}</select>日</div>` + timeRow('截止時間');
+    } else if (p === 'irregular' && isOnce(x)) {
+      if (x.once === 'day') body += `<div class="erow"><span class="el">日期</span><input type="date" id="eDate" value="${x.date}"></div>`;
+      if (x.once === 'range') body += `<div class="erow"><span class="el">期間</span><input type="date" id="eFrom" value="${x.rangeStart}">到<input type="date" id="eTo" value="${x.rangeEnd}"></div>`;
+      if (x.once === 'dates') body += `<div class="erow"><span class="el">跳日</span><input type="date" id="ePick" value="${today}"><button type="button" class="nb" id="eAddDate">加入</button></div><div class="chips" id="eChips"></div>`;
+      body += timeRow();
+    } else if (p === 'irregular') {
+      body += `<div class="erow"><span class="el">週期</span>每<input type="number" id="eEvery" min="1" value="${x.every || 1}">
+        <select id="eUnit">${Object.entries(UNIT).map(([k, n]) => `<option value="${k}" ${k === (x.unit || 'day') ? 'selected' : ''}>${n}</option>`).join('')}</select>一次</div>
+        <div class="erow"><span class="el">開始</span><input type="date" id="eStart" value="${x.start || today}"></div>` + timeRow('截止時間');
+    } else if (p === 'halfyear') {
+      body += `<div class="erow"><span class="el">起始日</span><input type="date" id="eStart" value="${x.start || fmt(halfCycle(x).start)}"><span class="sub">每 6 個月一期</span></div>`;
+    }
+    showModal(`<h3>編輯${kind === 'task' ? '行程' : pName(p) + '必做'}</h3>${body}
+      <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn okb" id="eSave"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>儲存</button></div>`);
+    const chips = () => { const el = $('#eChips'); if (el) el.innerHTML = eDates.map(d => `<span class="chip">${md(parseD(d))}（${WD[parseD(d).getDay()]}）<b data-erm="${d}">×</b></span>`).join(''); };
+    chips();
+    $('#modalBox').onclick = e => {
+      const w = e.target.closest('[data-ewd]'); if (w) { const d = +w.dataset.ewd; eDays = eDays.includes(d) ? eDays.filter(v => v !== d) : [...eDays, d]; w.classList.toggle('on'); }
+      if (e.target.id === 'eAddDate') { const v = $('#ePick').value; if (v && !eDates.includes(v)) { eDates = [...eDates, v].sort(); chips(); } }
+      if (e.target.dataset.erm) { eDates = eDates.filter(d => d !== e.target.dataset.erm); chips(); }
+    };
+    setTimeout(() => { const t = $('#eText'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 0);
+    $('#eText').onkeydown = e => { if (e.key === 'Enter') $('#eSave').click(); };
+    $('#eSave').onclick = () => {
+      const text = $('#eText').value.trim(); if (!text) return $('#eText').focus();
+      const v = id => $(id) ? $(id).value : undefined;
+      x.text = text;
+      if (v('#eTime') !== undefined) x.time = v('#eTime');
+      if (kind === 'task') x.date = v('#eDate') || x.date;
+      else if (p === 'weekly') { x.days = eDays; if (!eDays.length) x.time = ''; }
+      else if (p === 'monthly') { x.from = +v('#eFrom') || null; x.to = +v('#eTo') || null; if (x.from && x.to && x.from > x.to) [x.from, x.to] = [x.to, x.from]; }
+      else if (p === 'irregular' && isOnce(x)) {
+        if (x.once === 'day') x.date = v('#eDate') || x.date;
+        if (x.once === 'range') { const a = v('#eFrom') || x.rangeStart, b = v('#eTo') || a; [x.rangeStart, x.rangeEnd] = a <= b ? [a, b] : [b, a]; }
+        if (x.once === 'dates') { if (!eDates.length) { toast('跳日至少要有一個日期', '', 3000); return; } x.dates = eDates; }
+      } else if (p === 'irregular') { x.every = Math.max(1, parseInt(v('#eEvery')) || 1); x.unit = v('#eUnit'); x.start = v('#eStart') || x.start; }
+      else if (p === 'halfyear') { x.start = v('#eStart') || x.start; x.startMonth = parseD(x.start).getMonth() + 1; }
+      x.u = now(); save(); closeModal(); renderAll(); checkReminders(); toast('✅ 已儲存', x.text, 2000);
+    };
+  }
 
   // ================= 面板切換 =================
   const PANELS = ['#sheet', '#impSheet', '#coSheet'];
