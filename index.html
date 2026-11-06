@@ -123,6 +123,13 @@
   .sadd:hover{color:var(--accent);background:var(--soft)}
   .subs.archived{opacity:.8}
   .subs .arch{font-size:10.5px;color:var(--muted);padding:1px 3px}
+  .psubs{margin-top:4px}
+  .psubs.scroll{max-height:84px;overflow-y:auto;overscroll-behavior:contain}
+  .psubs::-webkit-scrollbar{width:6px}
+  .psubs::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+  .psubs .srow{min-height:28px;padding:2px 3px}
+  .psubs .sdot{width:15px;text-align:center;color:var(--muted);flex-shrink:0}
+  .smore{flex-basis:100%;margin:2px 0 0 36px;font-size:10.5px;color:var(--muted)}
   .sprog{font-size:11px;color:var(--muted);background:var(--soft);border-radius:9px;padding:1px 7px;flex-shrink:0}
   .logday{font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 4px}
   .logrow{background:var(--soft);border-radius:8px;padding:7px 9px;margin-bottom:5px;font-size:13px}
@@ -882,6 +889,12 @@
     return false;
   }
   // 那一天所屬的週期是否已完成
+  function keyOn(r, k, d) {
+    if (k === 'daily' || (k === 'weekly' && hasDays(r))) return `${r.id}|${d}`;
+    if (k === 'irregular') return `${r.id}|${isOnce(r) ? (r.once === 'dates' ? d : 'once') : d}`;
+    if (k === 'halfyear') return `${r.id}|H${d}`;
+    return `${r.id}|${periodKey(k, parseD(d))}`;
+  }
   function doneOn(r, k, d) {
     let key;
     if (k === 'daily' || (k === 'weekly' && hasDays(r))) key = d;
@@ -1151,7 +1164,7 @@
       const future = selDate > today;
       $('#planMust').innerHTML = rows.map(([k, n, r]) => `<li class="item" data-id="${r.id}" data-p="${k}">
         <span class="sp-ico">📅</span><span class="meta">${n}</span>${itemBody(r, k === 'irregular' || k === 'halfyear' || reqMeta(r, k).length > 12 ? reqMeta(r, k) : (r.time || ''))}
-        <span class="tag" style="background:var(--soft);color:var(--muted)">${future ? '預定' : '當天'}</span></li>`).join('');
+        <span class="tag" style="background:var(--soft);color:var(--muted)">${future ? '預定' : '當天'}</span>${planSubs(r, k, false, selDate)}</li>`).join('');
       return;
     }
     $('#planMust').innerHTML = rows.map(([k, n, r]) => {
@@ -1160,7 +1173,7 @@
         <input type="checkbox" class="chk" title="完成">
         <span class="meta">${n}</span>
         ${itemBody(r, meta)}
-        ${tag ? `<span class="tag">${tag}</span>` : ''}${subProg(r, k)}</li>`;
+        ${tag ? `<span class="tag">${tag}</span>` : ''}${subProg(r, k)}${planSubs(r, k, true)}</li>`;
     }).join('');
   }
   // 必做勾選完成前再確認一次
@@ -1176,6 +1189,15 @@
     if (!ss.length) return '';
     return `<span class="sprog">細節 ${ss.filter(sb => subDone(r, p, sb)).length}/${ss.length}</span>`;
   }
+  // 行程頁的細節：未完成在上、已完成下移；超過 3 項可捲動
+  function planSubs(r, p, live, d) {
+    const ss = subsOf(r); if (!ss.length) return '';
+    const base = live ? reqKey(r, p) : keyOn(r, p, d);
+    const rows = ss.map(sb => ({ sb, done: (state.reqDone[`${base}|${sb.id}`] || 0) > 0 })).sort((a, b) => a.done - b.done);
+    return `<div class="subs psubs ${ss.length > 3 ? 'scroll' : ''}" data-rid="${r.id}">${rows.map(({ sb, done }) => `<div class="srow ${done ? 'sdone' : ''}" data-sid="${sb.id}">
+        ${live ? `<input type="checkbox" class="chk schk" ${done ? 'checked' : ''}>` : `<span class="sdot">${done ? '✓' : '•'}</span>`}<span class="st">${esc(sb.t)}</span></div>`).join('')}</div>` +
+      (ss.length > 3 ? `<div class="smore">共 ${ss.length} 項細節，捲動查看更多 ↕</div>` : '');
+  }
   function subsBlock(r, p, dn) {
     const ss = subsOf(r);
     if (dn) {                                      // 已完成：顯示完成當下封存的細節，之後增減不影響
@@ -1189,7 +1211,8 @@
       return arch + add;
     }
     if (!ss.length && subAddFor !== r.id) return '';
-    return `<div class="subs" data-rid="${r.id}">${ss.map(sb => subEdit === sb.id
+    const view = [...ss].sort((a, b) => subDone(r, p, a) - subDone(r, p, b));
+    return `<div class="subs" data-rid="${r.id}">${view.map(sb => subEdit === sb.id
         ? `<div class="srow" data-sid="${sb.id}"><input class="field sin" value="${esc(sb.t)}"><button class="okbtn" data-sa="save" title="編輯完成"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button class="ni" data-sa="cancel" title="取消">×</button></div>`
         : `<div class="srow ${subDone(r, p, sb) ? 'sdone' : ''}" data-sid="${sb.id}"><input type="checkbox" class="chk schk" ${subDone(r, p, sb) ? 'checked' : ''}><span class="st" title="雙擊編輯">${esc(sb.t)}</span>
             <span class="sacts"><button class="ni" data-sa="edit" title="編輯">${ICON_EDIT}</button><button class="ni" data-sa="copy" title="複製">${ICON_COPY}</button><button class="ni danger" data-sa="del" title="刪除">×</button></span></div>`).join('')}
@@ -1611,6 +1634,7 @@
   $('#planMust').addEventListener('click', e => {
     const li = e.target.closest('.item'); if (!li) return;
     const k = li.dataset.p, r = state.required[k].find(x => x.id === li.dataset.id); if (!r) return;
+    if (e.target.closest('.psubs')) { if (e.target.classList.contains('schk')) subClick(e, r, k); return; }
     if (e.target.classList.contains('chk')) { e.target.checked = false; confirmDone(r, k); return; }
     if (e.target.closest('.text') || e.target.closest('[data-nt]')) {   // 點名稱跳到必做頁
       $('#mainTabs [data-tab=must]').click(); must = k; renderMust();
