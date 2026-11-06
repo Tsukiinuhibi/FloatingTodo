@@ -219,6 +219,23 @@
   .nb.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .nb.danger{color:var(--warn)}
   .nb.danger.confirm{background:var(--warn);border-color:var(--warn);color:#fff}
+  .nlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  .nrow{display:flex;align-items:center;gap:6px;padding:3px 3px 3px 2px;border-radius:6px;font-size:13px}
+  .nrow:hover{background:var(--card)}
+  .nrow .no{min-width:18px;height:18px;border-radius:9px;background:var(--accent-soft);color:var(--accent);font-size:10.5px;font-weight:700;display:grid;place-items:center;flex-shrink:0;align-self:flex-start;margin-top:1px}
+  .nrow .nt{flex:1;min-width:0;word-break:break-word;line-height:1.45;user-select:text;cursor:text}
+  .nacts{display:flex;gap:1px;opacity:.35;flex-shrink:0}
+  .nrow:hover .nacts{opacity:1}
+  .ni{border:0;background:transparent;min-width:22px;height:22px;border-radius:5px;color:var(--muted);display:grid;place-items:center;font-size:15px;line-height:1;padding:0}
+  .ni:hover{background:var(--soft);color:var(--accent)}
+  .ni.danger:hover{color:var(--warn);background:var(--warn-soft)}
+  .ni.confirm{background:var(--warn) !important;color:#fff !important;padding:0 6px;font-size:11px}
+  .nrow .nedit{flex:1;min-width:0;padding:4px 6px;font-size:13px}
+  .nadd{display:flex;gap:5px;margin-top:6px}
+  .nadd input{flex:1;min-width:0;padding:5px 8px;font-size:13px}
+  .nempty{font-size:12px;color:var(--muted);padding:2px 4px}
+  .add-note .nlist{margin-bottom:2px}
+  .add-note .nrow{background:var(--card);border:1px solid var(--line)}
   .note-tg{width:34px;padding:0 !important;display:grid;place-items:center;background:var(--card) !important;color:var(--muted) !important;border:1px solid var(--line) !important}
   .note-tg.on{color:var(--accent) !important;border-color:var(--accent) !important}
   .add-note{margin:-4px 0 10px}
@@ -363,7 +380,8 @@
         <button type="button" class="note-tg" id="taskNoteTg" title="加上備註"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></button>
         <button type="submit">新增</button>
       </form>
-      <div class="add-note hidden" id="taskNoteWrap"><textarea class="field" id="taskNote" placeholder="備註（可留空）"></textarea></div>
+      <div class="add-note hidden" id="taskNoteWrap"><ol class="nlist" id="taskNoteList"></ol>
+        <div class="nadd" style="margin-top:4px"><input class="field" id="taskNote" placeholder="輸入一條備註，按 Enter 加入下一條" autocomplete="off"><button type="button" class="nb" id="taskNoteAdd">加入</button></div></div>
       <ul class="list" id="taskList"></ul>
     </section>
 
@@ -388,7 +406,8 @@
         <button type="button" class="note-tg" id="mustNoteTg" title="加上備註"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></button>
         <button type="submit">新增</button>
       </form>
-      <div class="add-note hidden" id="mustNoteWrap"><textarea class="field" id="mustNote" placeholder="備註（可留空）"></textarea></div>
+      <div class="add-note hidden" id="mustNoteWrap"><ol class="nlist" id="mustNoteList"></ol>
+        <div class="nadd" style="margin-top:4px"><input class="field" id="mustNote" placeholder="輸入一條備註，按 Enter 加入下一條" autocomplete="off"><button type="button" class="nb" id="mustNoteAdd">加入</button></div></div>
       <ul class="list" id="mustList"></ul>
     </section>
   </main>
@@ -586,6 +605,15 @@
     const all = [...state.tasks]; ALLP.forEach(([k]) => all.push(...state.required[k]));
     all.forEach(x => remember(x.text, x.time, x.u || 0));
   }
+  // 備註改為逐條：舊版的整段文字依換行拆成多條
+  function normNotes(x) {
+    if (typeof x.note === 'string') {
+      if (!Array.isArray(x.notes)) x.notes = x.note.split('\n').map(v => v.trim()).filter(Boolean).map(t => ({ id: uid(), t }));
+      delete x.note;
+    }
+    return x;
+  }
+  state.tasks.forEach(normNotes); ALLP.forEach(([k]) => state.required[k].forEach(normNotes));
   function remember(text, time, at = Date.now()) {
     const h = state.history, i = h.findIndex(x => x.text === text);
     if (i >= 0) { h[i].n++; h[i].last = Math.max(h[i].last, at); if (time) h[i].time = time; }
@@ -956,20 +984,30 @@
     }).join('');
   }
   const openDrawer = on => { $('#drawer').classList.toggle('open', on); $('#scrim').classList.toggle('open', on); };
-  // 備註
+  // 備註（逐條）
   const NOTE_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>';
+  const ICON_COPY = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>';
+  const ICON_EDIT = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+  const notesOf = x => Array.isArray(x.notes) ? x.notes : [];
   function itemBody(x, sub = '') {
-    const pv = x.note ? `<div class="note-pv" data-nt title="點開備註">📝 ${esc(x.note.split('\n')[0])}</div>` : '';
+    const ns = notesOf(x);
+    const pv = ns.length ? `<div class="note-pv" data-nt title="點開備註">📝 ${ns.length > 1 ? `${ns.length} 條・` : ''}${esc(ns[0].t)}</div>` : '';
     return `<div class="body"><span class="text" title="雙擊可編輯">${esc(x.text)}</span>${sub ? `<span class="meta sub-meta">${sub}</span>` : ''}${pv}</div>`;
   }
-  const noteBtn = x => `<button class="nbtn ${x.note ? 'has' : ''} ${noteOpen === x.id ? 'open' : ''}" title="${x.note ? '查看備註' : '新增備註'}">${NOTE_ICON}</button>`;
+  const noteBtn = x => { const n = notesOf(x).length; return `<button class="nbtn ${n ? 'has' : ''} ${noteOpen === x.id ? 'open' : ''}" title="${n ? `備註（${n} 條）` : '新增備註'}">${NOTE_ICON}</button>`; };
   function notePanel(x) {
     if (noteOpen !== x.id) return '';
-    if (noteEdit === x.id || !x.note)
-      return `<div class="note-panel"><textarea class="field note-edit" placeholder="輸入備註…（Ctrl+Enter 儲存）">${esc(x.note || '')}</textarea>
-        <div class="note-actions"><button class="nb" data-na="cancel">取消</button><button class="nb primary" data-na="save">儲存</button></div></div>`;
-    return `<div class="note-panel"><div class="note-full">${esc(x.note)}</div>
-      <div class="note-actions"><button class="nb" data-na="copy">複製</button><button class="nb" data-na="edit">編輯</button><button class="nb danger" data-na="del">刪除</button></div></div>`;
+    const ns = notesOf(x);
+    const rows = ns.map((n, i) => noteEdit === n.id
+      ? `<li class="nrow" data-nid="${n.id}"><span class="no">${i + 1}</span><input class="field nedit" value="${esc(n.t)}">
+          <button class="nb primary" data-na="save">儲存</button><button class="nb" data-na="cancel">取消</button></li>`
+      : `<li class="nrow" data-nid="${n.id}"><span class="no">${i + 1}</span><span class="nt" title="雙擊編輯">${esc(n.t)}</span>
+          <span class="nacts"><button class="ni" data-na="copy" title="複製這條">${ICON_COPY}</button><button class="ni" data-na="edit" title="編輯">${ICON_EDIT}</button><button class="ni danger" data-na="del" title="刪除這條">×</button></span></li>`).join('');
+    return `<div class="note-panel">
+      ${ns.length ? `<ol class="nlist">${rows}</ol>` : '<div class="nempty">還沒有備註，從下方逐條新增</div>'}
+      <div class="nadd"><input class="field nnew" placeholder="新增一條備註，按 Enter 加入" autocomplete="off"><button class="nb primary" data-na="add">新增</button></div>
+      ${ns.length > 1 ? '<div class="note-actions"><button class="nb" data-na="copyall">全部複製</button></div>' : ''}
+    </div>`;
   }
   async function copyText(t) {
     try { await navigator.clipboard.writeText(t); return true; }
@@ -978,36 +1016,72 @@
       document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
     }
   }
-  function focusNote() {
-    setTimeout(() => { const ta = document.querySelector('.note-edit'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }, 0);
+  function focusIn(sel) {
+    setTimeout(() => { const el = document.querySelector(sel); if (el) { el.focus(); if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length); } }, 0);
   }
   // 回傳 true 代表這次點擊是備註相關操作
   function noteClick(e, x, rerender) {
     if (e.target.closest('.nbtn') || e.target.closest('[data-nt]')) {
-      if (noteOpen === x.id) { noteOpen = null; noteEdit = null; }
-      else { noteOpen = x.id; noteEdit = x.note ? null : x.id; }
-      rerender(); if (noteEdit) focusNote(); return true;
+      if (noteOpen === x.id) { noteOpen = null; noteEdit = null; } else { noteOpen = x.id; noteEdit = null; }
+      rerender(); if (noteOpen) focusIn('.note-panel .nnew'); return true;
     }
+    if (e.target.closest('.note-panel') && !e.target.closest('[data-na]')) return true;
     const b = e.target.closest('[data-na]'); if (!b) return false;
-    const a = b.dataset.na, li = b.closest('.item');
-    if (a === 'copy') copyText(x.note).then(ok => toast(ok ? '📋 已複製備註' : '無法複製', '', 2000));
-    if (a === 'edit') { noteEdit = x.id; rerender(); focusNote(); }
-    if (a === 'cancel') { noteEdit = null; if (!x.note) noteOpen = null; rerender(); }
-    if (a === 'save') {
-      const v = li.querySelector('.note-edit').value.replace(/\s+$/, '');
-      x.note = v; x.u = now(); noteEdit = null; if (!v) noteOpen = null; save(); rerender();
+    const a = b.dataset.na, panel = b.closest('.note-panel'), row = b.closest('.nrow');
+    const ns = x.notes = notesOf(x);
+    const n = row ? ns.find(v => v.id === row.dataset.nid) : null;
+    const touch = () => { x.u = now(); save(); };
+    if (a === 'add') {
+      const inp = panel.querySelector('.nnew'), v = inp.value.trim();
+      if (!v) { inp.focus(); return true; }
+      ns.push({ id: uid(), t: v }); touch(); noteEdit = null; rerender(); focusIn('.note-panel .nnew');
     }
-    if (a === 'del') {
-      if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.classList.add('confirm'); b.textContent = '確定刪除？'; setTimeout(() => { if (b.isConnected) { b.dataset.confirm = ''; b.classList.remove('confirm'); b.textContent = '刪除'; } }, 3000); return true; }
-      x.note = ''; x.u = now(); noteOpen = null; noteEdit = null; save(); rerender(); toast('已刪除備註', '', 2000);
+    if (a === 'copy' && n) copyText(n.t).then(ok => toast(ok ? '📋 已複製' : '無法複製', ok ? n.t : '', 2000));
+    if (a === 'copyall') copyText(ns.map((v, i) => `${i + 1}. ${v.t}`).join('\n')).then(ok => toast(ok ? `📋 已複製全部 ${ns.length} 條` : '無法複製', '', 2000));
+    if (a === 'edit' && n) { noteEdit = n.id; rerender(); focusIn('.note-panel .nedit'); }
+    if (a === 'cancel') { noteEdit = null; rerender(); }
+    if (a === 'save' && n) {
+      const v = row.querySelector('.nedit').value.trim();
+      if (v) n.t = v; else x.notes = ns.filter(o => o !== n);
+      touch(); noteEdit = null; rerender();
+    }
+    if (a === 'del' && n) {
+      if (b.dataset.confirm !== '1') {
+        b.dataset.confirm = '1'; b.classList.add('confirm'); b.textContent = '刪除？';
+        setTimeout(() => { if (b.isConnected) { b.dataset.confirm = ''; b.classList.remove('confirm'); b.textContent = '×'; } }, 3000);
+        return true;
+      }
+      x.notes = ns.filter(o => o !== n); touch(); noteEdit = null; rerender();
     }
     return true;
   }
   function noteKeys(e) {
-    if (!e.target.classList.contains('note-edit')) return;
-    const li = e.target.closest('.item');
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); li.querySelector('[data-na=save]').click(); }
-    if (e.key === 'Escape') li.querySelector('[data-na=cancel]').click();
+    const t = e.target, panel = t.closest && t.closest('.note-panel'); if (!panel) return;
+    if (t.classList.contains('nnew')) {
+      if (e.key === 'Enter') { e.preventDefault(); panel.querySelector('[data-na=add]').click(); }
+      if (e.key === 'Escape') t.blur();
+    }
+    if (t.classList.contains('nedit')) {
+      if (e.key === 'Enter') { e.preventDefault(); t.closest('.nrow').querySelector('[data-na=save]').click(); }
+      if (e.key === 'Escape') t.closest('.nrow').querySelector('[data-na=cancel]').click();
+    }
+  }
+  function noteDbl(e, x, rerender) {
+    const nt = e.target.closest('.nt'); if (!nt) return false;
+    noteEdit = nt.closest('.nrow').dataset.nid; rerender(); focusIn('.note-panel .nedit'); return true;
+  }
+  // 新增事項時的待加入備註
+  const pend = { task: [], must: [] };
+  function renderPend(k) {
+    $(`#${k}NoteList`).innerHTML = pend[k].map((t, i) => `<li class="nrow"><span class="no">${i + 1}</span>
+      <input class="field nedit" data-i="${i}" value="${esc(t)}"><button type="button" class="ni danger" data-pi="${i}" title="移除">×</button></li>`).join('');
+  }
+  function takePend(k) {
+    const v = $(`#${k}Note`).value.trim(); if (v) pend[k].push(v);
+    const out = pend[k].map(t => t.trim()).filter(Boolean).map(t => ({ id: uid(), t }));
+    pend[k] = []; $(`#${k}Note`).value = ''; renderPend(k);
+    $(`#${k}NoteWrap`).classList.add('hidden'); $(`#${k}NoteTg`).classList.remove('on');
+    return out;
   }
   function renderBadges() {
     $('#badgePlan').textContent = state.tasks.filter(t => t.date === today && !t.done).length || '';
@@ -1117,11 +1191,10 @@
   $('#addTask').onsubmit = e => {
     e.preventDefault();
     const text = $('#taskText').value.trim(); if (!text) return $('#taskText').focus();
-    const note = $('#taskNote').value.replace(/\s+$/, '');
-    state.tasks.push({ id: uid(), date: selDate, time: $('#taskTime').value, text, note, done: false, u: now() });
+    const notes = takePend('task');
+    state.tasks.push({ id: uid(), date: selDate, time: $('#taskTime').value, text, notes, done: false, u: now() });
     remember(text, $('#taskTime').value);
-    $('#taskText').value = ''; $('#taskTime').value = ''; $('#taskNote').value = '';
-    $('#taskNoteWrap').classList.add('hidden'); $('#taskNoteTg').classList.remove('on');
+    $('#taskText').value = ''; $('#taskTime').value = '';
     save(); renderAll(); checkReminders(); $('#taskText').focus();
   };
   $('#taskList').addEventListener('click', e => {
@@ -1132,6 +1205,8 @@
     if (e.target.classList.contains('del')) { state.deleted[t.id] = now(); state.tasks = state.tasks.filter(x => x !== t); save(); renderAll(); }
   });
   $('#taskList').addEventListener('dblclick', e => {
+    const li0 = e.target.closest('.item'); const t0 = li0 && state.tasks.find(x => x.id === li0.dataset.id);
+    if (t0 && noteDbl(e, t0, renderDay)) return;
     const span = e.target.closest('.text'); if (!span) return;
     const t = state.tasks.find(x => x.id === span.closest('.item').dataset.id);
     startEdit(span, v => { t.text = v; t.u = now(); save(); });
@@ -1154,11 +1229,14 @@
   $('#mustOpts').addEventListener('input', e => { if (e.target.id === 'iEvery') iEvery = e.target.value; });
   $('#taskList').addEventListener('keydown', noteKeys);
   $('#mustList').addEventListener('keydown', noteKeys);
-  [['#taskNoteTg', '#taskNoteWrap', '#taskNote'], ['#mustNoteTg', '#mustNoteWrap', '#mustNote']].forEach(([tg, wrap, ta]) => {
-    $(tg).onclick = () => {
-      const on = $(wrap).classList.toggle('hidden') === false;
-      $(tg).classList.toggle('on', on); if (on) $(ta).focus();
-    };
+  ['task', 'must'].forEach(k => {
+    const tg = $(`#${k}NoteTg`), wrap = $(`#${k}NoteWrap`), inp = $(`#${k}Note`), list = $(`#${k}NoteList`);
+    tg.onclick = () => { const on = wrap.classList.toggle('hidden') === false; tg.classList.toggle('on', on); if (on) inp.focus(); };
+    const addOne = () => { const v = inp.value.trim(); if (!v) return; pend[k].push(v); inp.value = ''; renderPend(k); inp.focus(); };
+    $(`#${k}NoteAdd`).onclick = addOne;
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addOne(); } });
+    list.addEventListener('input', e => { if (e.target.dataset.i != null) pend[k][+e.target.dataset.i] = e.target.value; });
+    list.addEventListener('click', e => { const b = e.target.closest('[data-pi]'); if (b) { pend[k].splice(+b.dataset.pi, 1); renderPend(k); } });
   });
   $('#moreBtn').onclick = () => openDrawer(true);
   $('#drawerClose').onclick = () => openDrawer(false);
@@ -1171,7 +1249,7 @@
     e.preventDefault();
     const text = $('#mustText').value.trim(); if (!text) return $('#mustText').focus();
     const tm = $('#mustTime').value;
-    const it = { id: uid(), text, time: '', note: $('#mustNote').value.replace(/\s+$/, ''), u: now() };
+    const it = { id: uid(), text, time: '', notes: [], u: now() };
     if (must === 'daily') it.time = tm;
     if (must === 'weekly') {
       if (tm && !wdSel.length) { toast('請先選擇週幾', '每週事項要指定週幾才能設定時間', 4000); return; }
@@ -1183,10 +1261,10 @@
     }
     if (must === 'irregular') { it.every = Math.max(1, parseInt(iEvery) || 1); it.unit = iUnit; it.start = iStart || today; it.time = tm; }
     if (must === 'halfyear') it.startMonth = +hMonth;
+    it.notes = takePend('must');
     state.required[must].push(it);
     remember(text, it.time);
-    $('#mustText').value = ''; $('#mustTime').value = ''; $('#mustNote').value = '';
-    $('#mustNoteWrap').classList.add('hidden'); $('#mustNoteTg').classList.remove('on');
+    $('#mustText').value = ''; $('#mustTime').value = '';
     wdSel = []; mFrom = ''; mTo = ''; iEvery = '1'; iStart = '';
     save(); renderAll(); checkReminders(); $('#mustText').focus();
   };
@@ -1198,6 +1276,8 @@
     if (e.target.classList.contains('del')) { state.deleted[r.id] = now(); state.required[must] = state.required[must].filter(x => x !== r); save(); renderAll(); }
   });
   $('#mustList').addEventListener('dblclick', e => {
+    const li0 = e.target.closest('.item'); const r0 = li0 && state.required[must].find(x => x.id === li0.dataset.id);
+    if (r0 && noteDbl(e, r0, renderMust)) return;
     const span = e.target.closest('.text'); if (!span) return;
     const r = state.required[must].find(x => x.id === span.closest('.item').dataset.id);
     startEdit(span, v => { r.text = v; r.u = now(); save(); });
@@ -1514,7 +1594,8 @@
     try { f = JSON.parse(text); } catch (e) { toast('無法讀取檔案', '這不是有效的繼承檔', 5000); return; }
     if (!f || f.app !== 'FloatingTodo' || !f.user || !f.data) { toast('檔案格式不符', '請選擇「桌面代辦」匯出的繼承檔', 5000); return; }
     const d = f.data;
-    d.tasks = d.tasks || []; d.required = Object.assign(blankReq(), d.required || {});
+    d.tasks = (d.tasks || []).map(normNotes); d.required = Object.assign(blankReq(), d.required || {});
+    ALLP.forEach(([k]) => d.required[k] = (d.required[k] || []).map(normNotes));
     const { result, st } = mergeData(state, d);
     const same = f.user.id === state.user.id;
     const localEmpty = countItems(state) === 0;
@@ -1688,7 +1769,8 @@
   setInterval(tick, 1000);
   setInterval(() => {
     checkReminders();
-    if (!document.querySelector('[contenteditable=true]') && !noteEdit) { renderDay(); renderMust(); renderBadges(); }
+    const busy = document.activeElement && document.activeElement.closest && document.activeElement.closest('.note-panel');
+    if (!document.querySelector('[contenteditable=true]') && !noteEdit && !busy) { renderDay(); renderMust(); renderBadges(); }
   }, 30000);
 })();
 </script>
