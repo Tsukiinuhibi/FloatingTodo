@@ -8,7 +8,7 @@
   :root{
     --bg:#f7f5f0; --card:#ffffff; --bar:#2a2d33; --bar-ink:#f3f1ec;
     --ink:#22252a; --muted:#7b7f87; --accent:#e0531f; --ok:#2f9e6a;
-    --warn:#d9480f; --soon:#c98a00; --radius:10px;
+    --warn:#d9480f; --soon:#c98a00; --hol:#d23c3c; --radius:10px;
   }
   /* 衍生色：跟著各自區塊的主色計算（預覽視窗才能獨立變色） */
   .app,.pv{
@@ -75,15 +75,25 @@
   .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
   .dow{text-align:center;font-size:11px;color:var(--muted);padding:2px 0}
   .dow:first-child,.dow:last-child{color:color-mix(in srgb,var(--accent) 75%,var(--muted))}
-  .day{position:relative;border:0;background:transparent;height:32px;border-radius:7px;font-variant-numeric:tabular-nums}
+  .day{position:relative;border:0;background:transparent;height:36px;border-radius:7px;font-variant-numeric:tabular-nums;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:0 1px;overflow:hidden}
+  .day .hl{font-size:9px;max-width:100%;white-space:nowrap;overflow:hidden;margin-top:1px;color:var(--hol)}
+  .day.off{color:var(--hol)}
+  .day.work .hl{color:var(--muted)}
+  .day.other .hl{opacity:.6}
+  .day.sel .hl,.day.sel{color:#fff}
   .day:hover{background:var(--soft)}
   .day.other{color:color-mix(in srgb,var(--muted) 55%,var(--card))}
   .day.today{box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:700}
   .day.sel{background:var(--accent);color:#fff;font-weight:700}
-  .day .dot{position:absolute;left:50%;bottom:3px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--accent)}
+  .day .dot{position:absolute;right:4px;top:4px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
   .day .dot.done{background:var(--ok)}
   .day.sel .dot{background:#fff}
 
+  .hol-info{font-size:12px;color:var(--muted);margin-top:6px;padding:6px 4px 0;border-top:1px dashed var(--line);line-height:1.5}
+  .hol-info b{color:var(--hol);font-weight:600}
+  .hol-day{font-size:12px;margin:-4px 2px 8px;padding:6px 9px;border-radius:8px;background:color-mix(in srgb,var(--hol) 11%,var(--card));color:color-mix(in srgb,var(--hol) 85%,var(--ink))}
+  .hol-day.work{background:var(--soft);color:var(--muted)}
   .sec-head{display:flex;align-items:center;gap:8px;margin:4px 2px 8px}
   .sec-head h2{margin:0;font-size:15px;flex:1}
   .sub{font-size:12px;color:var(--muted)}
@@ -343,8 +353,10 @@
           <button class="sbtn" id="calFold" title="收合日曆">▴</button>
         </div>
         <div class="grid" id="calGrid"></div>
+        <div class="hol-info hidden" id="holInfo"></div>
       </div>
       <div class="sec-head"><h2 id="dayTitle"></h2><span class="sub" id="dayCount"></span></div>
+      <div class="hol-day hidden" id="holDay"></div>
       <form class="add" id="addTask">
         <input type="time" id="taskTime" title="時間（可留空＝全天）">
         <input type="text" id="taskText" placeholder="要做什麼事？" autocomplete="off">
@@ -519,6 +531,15 @@
           </div>
         </div>
         <div class="desc">程式每次啟動、之後每 6 小時會自動檢查新版本。有新版本時，視窗上方會出現提示，按「立即更新」就會下載，下載完按「重新啟動」即完成更新，資料都會保留。</div>
+
+        <div class="lab">台灣假期資料</div>
+        <div class="card">
+          <label class="check-row" style="margin-bottom:6px"><input type="checkbox" class="chk" id="holShow"><span>在日曆顯示國定假日、補假與補班日</span></label>
+          <div class="kv"><span>已有年份</span><span id="holYears"></span></div>
+          <div class="kv"><span>上次檢查</span><span id="holChecked"></span></div>
+          <div style="margin-top:8px"><button class="btn ghost" id="holUpdate">立即更新假期資料</button></div>
+          <div class="desc" style="margin:8px 0 0">資料來源：行政院人事行政總處「政府行政機關辦公日曆表」（政府資料開放平臺）。程式每天會自動檢查一次，新年度的日曆表公布後會自動加入。</div>
+        </div>
       </section>
     </div>
   </div>
@@ -656,6 +677,67 @@
   }
   const isReqDone = (r, p) => (state.reqDone[reqKey(r, p)] || 0) > 0;   // 正數＝勾選時間，負數＝取消時間
 
+  // ================= 台灣假期 =================
+  // 內建 2025–2027 年資料：[日期, 是否放假, 名稱]（只存國定假日、補假、補班等例外日）
+  const HOL_BUNDLE = {"2025":[["20250101",1,"開國紀念日"],["20250127",1,"小年夜"],["20250128",1,"農曆除夕"],["20250129",1,"春節"],["20250130",1,"春節"],["20250131",1,"春節"],["20250208",0,"補行上班"],["20250228",1,"和平紀念日"],["20250403",1,"補假"],["20250404",1,"兒童節及民族掃墓節"],["20250530",1,"補假"],["20250531",1,"端午節"],["20250928",1,"孔子誕辰紀念日"],["20250929",1,"補假"],["20251006",1,"中秋節"],["20251010",1,"國慶日"],["20251024",1,"補假"],["20251025",1,"臺灣光復暨金門古寧頭大捷紀念日"],["20251225",1,"行憲紀念日"]],"2026":[["20260101",1,"開國紀念日"],["20260215",1,"小年夜"],["20260216",1,"農曆除夕"],["20260217",1,"春節"],["20260218",1,"春節"],["20260219",1,"春節"],["20260220",1,"補假"],["20260227",1,"補假"],["20260228",1,"和平紀念日"],["20260403",1,"補假"],["20260404",1,"兒童節"],["20260405",1,"清明節"],["20260406",1,"補假"],["20260501",1,"勞動節"],["20260619",1,"端午節"],["20260925",1,"中秋節"],["20260928",1,"孔子誕辰紀念日/教師節"],["20261009",1,"補假"],["20261010",1,"國慶日"],["20261025",1,"臺灣光復暨金門古寧頭大捷紀念日"],["20261026",1,"補假"],["20261225",1,"行憲紀念日"]],"2027":[["20270101",1,"開國紀念日"],["20270204",1,"小年夜"],["20270205",1,"農曆除夕"],["20270206",1,"春節"],["20270207",1,"春節"],["20270208",1,"春節"],["20270209",1,"補假"],["20270210",1,"補假"],["20270228",1,"和平紀念日"],["20270301",1,"補假"],["20270404",1,"兒童節"],["20270405",1,"清明節"],["20270406",1,"補假"],["20270430",1,"補假"],["20270501",1,"勞動節"],["20270609",1,"端午節"],["20270915",1,"中秋節"],["20270928",1,"孔子誕辰紀念日/教師節"],["20271010",1,"國慶日"],["20271011",1,"補假"],["20271025",1,"臺灣光復暨金門古寧頭大捷紀念日"],["20271224",1,"補假"],["20271225",1,"行憲紀念日"],["20271231",1,"補假"]]};
+  const HOL_KEY = 'floating-todo-holidays';
+  const HOL_URLS = y => [`https://raw.githubusercontent.com/ruyut/TaiwanCalendar/master/data/${y}.json`,
+                         `https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${y}.json`];
+  let holCache = { years: {}, checked: 0 };
+  try { const c = JSON.parse(localStorage.getItem(HOL_KEY)); if (c && c.years) holCache = c; } catch (e) {}
+  let HOL = {}, HOL_YEARS = [];
+  function buildHol() {
+    HOL = {}; const ys = new Set();
+    const add = (y, list) => { ys.add(+y); list.forEach(([d, off, name]) => HOL[`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}`] = { off: !!off, name }); };
+    Object.entries(HOL_BUNDLE).forEach(([y, l]) => add(y, l));
+    Object.entries(holCache.years).forEach(([y, l]) => add(y, l));
+    HOL_YEARS = [...ys].sort();
+  }
+  buildHol();
+  const SHORT = { '開國紀念日': '元旦', '農曆除夕': '除夕', '和平紀念日': '228', '孔子誕辰紀念日/教師節': '教師節',
+    '臺灣光復暨金門古寧頭大捷紀念日': '光復節', '台灣光復暨金門古寧頭大捷紀念日': '光復節', '行憲紀念日': '行憲',
+    '補行上班': '補班', '補行上班日': '補班', '勞動節': '勞動節', '兒童節': '兒童節' };
+  const shortName = n => SHORT[n] || (n.length > 3 ? n.replace(/節$|紀念日$/, '').slice(0, 3) : n);
+  function dayInfo(k) {
+    const d = parseD(k), wk = d.getDay() === 0 || d.getDay() === 6, h = HOL[k];
+    if (h) return { off: h.off, name: h.name, work: !h.off, known: true };
+    return { off: wk, name: '', work: false, known: HOL_YEARS.includes(d.getFullYear()) };
+  }
+  // 連續放假區間（含週末），需包含國定假日
+  function streak(k) {
+    if (!dayInfo(k).off) return null;
+    let a = parseD(k), b = parseD(k), named = !!dayInfo(k).name;
+    for (let i = 0; i < 20; i++) { const p = addDays(a, -1), x = dayInfo(fmt(p)); if (!x.off) break; a = p; named = named || !!x.name; }
+    for (let i = 0; i < 20; i++) { const n = addDays(b, 1), x = dayInfo(fmt(n)); if (!x.off) break; b = n; named = named || !!x.name; }
+    return named ? { start: a, end: b, len: dayDiff(a, b) + 1 } : null;
+  }
+  const holToEntries = arr => arr.filter(x => { const w = x.week === '六' || x.week === '日'; return x.description || (!!x.isHoliday) !== w; })
+    .map(x => [String(x.date), x.isHoliday ? 1 : 0, x.description || (x.isHoliday ? '放假' : '補班')]);
+  async function fetchJson(url) {
+    const ac = new AbortController(), t = setTimeout(() => ac.abort(), 8000);
+    try { const r = await fetch(url, { signal: ac.signal, cache: 'no-store' }); if (r.status === 404) return 404; if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); }
+    finally { clearTimeout(t); }
+  }
+  // 自動找尋台灣假期：檢查今年與明年（每天一次）
+  async function updateHolidays(force) {
+    if (!force && now() - (holCache.checked || 0) < 864e5) return null;
+    const y = new Date().getFullYear(), got = []; let err = null;
+    for (const yy of [y, y + 1]) {
+      for (const url of HOL_URLS(yy)) {
+        try {
+          const j = await fetchJson(url);
+          if (j === 404) break;                                   // 該年度尚未公布
+          if (Array.isArray(j) && j.length >= 365) { holCache.years[yy] = holToEntries(j); got.push(yy); break; }
+        } catch (e) { err = e; }
+      }
+    }
+    holCache.checked = now();
+    if (got.length) holCache.ok = now();
+    try { localStorage.setItem(HOL_KEY, JSON.stringify(holCache)); } catch (e) {}
+    buildHol();
+    return { got, err: got.length ? null : err };
+  }
+
   // ================= 介面狀態 =================
   let today = fmt(new Date());
   let selDate = today;
@@ -746,13 +828,48 @@
     for (let i = 0; i < rows*7; i++) {
       const d = new Date(start); d.setDate(start.getDate() + i);
       const k = fmt(d), c = cnt[k];
-      const cls = ['day', d.getMonth() !== m && 'other', k === today && 'today', k === selDate && 'sel'].filter(Boolean).join(' ');
-      h += `<button class="${cls}" data-date="${k}">${d.getDate()}${c ? `<i class="dot ${c.open ? '' : 'done'}"></i>` : ''}</button>`;
+      const hi = state.holShow !== false ? dayInfo(k) : { off: false, name: '' };
+      const cls = ['day', d.getMonth() !== m && 'other', k === today && 'today', k === selDate && 'sel', hi.name && hi.off && 'off', hi.work && 'work'].filter(Boolean).join(' ');
+      const tip = hi.name ? ` title="${esc(hi.name)}"` : '';
+      h += `<button class="${cls}" data-date="${k}"${tip}><span>${d.getDate()}</span>${hi.name ? `<span class="hl">${esc(shortName(hi.name))}</span>` : ''}${c ? `<i class="dot ${c.open ? '' : 'done'}"></i>` : ''}</button>`;
     }
     $('#calGrid').innerHTML = h;
+    renderHolInfo();
+  }
+  // 下一個假期提示
+  function renderHolInfo() {
+    const el = $('#holInfo');
+    if (state.holShow === false || !state.calOpen) return el.classList.add('hidden');
+    const t = dayInfo(today);
+    let html = '';
+    if (t.name && t.off) {
+      const st = streak(today);
+      html = `🎉 今天<b>${esc(t.name)}</b>${st && st.len >= 3 ? `・連假第 ${dayDiff(st.start, parseD(today)) + 1}/${st.len} 天` : ''}`;
+    } else {
+      const cur = streak(today);
+      let d = cur ? addDays(cur.end, 1) : addDays(parseD(today), 1);
+      for (let i = 0; i < 400; i++, d = addDays(d, 1)) {
+        const k = fmt(d), x = dayInfo(k);
+        if (!x.known) break;
+        if (x.name && x.off) {
+          const st = streak(k), s0 = st ? st.start : d, left = dayDiff(parseD(today), s0);
+          html = `下一個假期 <b>${md(d)}（${WD[d.getDay()]}）${esc(x.name)}</b>` +
+            (st && st.len >= 3 ? `・連假 ${st.len} 天` : '') + `・${left <= 1 ? (left === 1 ? '明天開始' : '今天') : `還有 ${left} 天`}`;
+          break;
+        }
+      }
+    }
+    el.innerHTML = html; el.classList.toggle('hidden', !html);
   }
   function renderDay() {
     const d = parseD(selDate);
+    const hi = dayInfo(selDate), hd = $('#holDay');
+    if (state.holShow !== false && (hi.name || hi.work)) {
+      const st = streak(selDate);
+      hd.className = 'hol-day' + (hi.work ? ' work' : '');
+      hd.textContent = hi.work ? `💼 ${hi.name === '補行上班' ? '補行上班日' : hi.name}・要上班`
+        : `🎌 ${hi.name}・放假` + (st && st.len >= 3 ? `（${md(st.start)}–${md(st.end)} 連假 ${st.len} 天）` : '');
+    } else hd.className = 'hol-day hidden';
     $('#dayTitle').textContent = `${d.getMonth()+1} 月 ${d.getDate()} 日（${WD[d.getDay()]}）` + (selDate === today ? '・今天' : '');
     const list = state.tasks.filter(t => t.date === selDate).sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
     const done = list.filter(t => t.done).length;
@@ -1154,7 +1271,7 @@
     switchSheet(tab);
     draft = Object.assign({}, currentTheme());
     selectTarget(target);
-    renderData(); renderUpdate(); renderMail();
+    renderData(); renderUpdate(); renderMail(); renderHolSettings();
   }
   function switchSheet(s) {
     document.querySelectorAll('#sheetTabs button').forEach(b => b.classList.toggle('active', b.dataset.s === s));
@@ -1444,6 +1561,22 @@
   function closeModal() { $('#modal').classList.add('hidden'); }
   $('#modal').addEventListener('click', e => { if (e.target.id === 'modal' || e.target.hasAttribute('data-close')) closeModal(); });
 
+  // ================= 假期設定 =================
+  function renderHolSettings() {
+    $('#holShow').checked = state.holShow !== false;
+    $('#holYears').textContent = HOL_YEARS.join('、') || '—';
+    $('#holChecked').textContent = holCache.checked ? dt(holCache.checked) : '尚未連線檢查（使用內建資料）';
+  }
+  $('#holShow').onchange = () => { state.holShow = $('#holShow').checked; save(); renderCal(); renderDay(); };
+  $('#holUpdate').onclick = async () => {
+    const b = $('#holUpdate'); b.disabled = true; b.textContent = '更新中…';
+    const r = await updateHolidays(true);
+    b.disabled = false; b.textContent = '立即更新假期資料';
+    renderHolSettings(); renderCal(); renderDay();
+    if (r && r.got.length) toast('🎌 假期資料已更新', `已取得 ${r.got.join('、')} 年的政府辦公日曆`, 5000);
+    else toast('無法更新假期資料', '請確認網路連線；目前仍使用內建的 ' + HOL_YEARS.join('、') + ' 年資料', 6000);
+  };
+
   // ================= 回信備份 =================
   window.__backupPayload = () => JSON.stringify(exportPayload(), null, 1);   // 關閉程式時由桌面端讀取
   const fmtErr = m => m || '未知錯誤';
@@ -1545,6 +1678,13 @@
   // ================= 啟動 =================
   if (desktop && state.pinned) desktop.setPin(true);
   tick(); renderAll(); renderUpdate(); checkReminders();
+  const autoHol = () => updateHolidays(false).then(r => {
+    if (!r) return;
+    renderCal(); renderDay();
+    if (!$('#sheet').classList.contains('hidden')) renderHolSettings();
+  }).catch(() => {});
+  setTimeout(autoHol, 3000);
+  setInterval(autoHol, 6 * 3600e3);
   setInterval(tick, 1000);
   setInterval(() => {
     checkReminders();
