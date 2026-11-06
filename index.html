@@ -131,6 +131,14 @@
   .imenu button.danger{color:var(--warn)}
   .imenu button.danger:hover{background:var(--warn-soft)}
   .imenu.ctx{min-width:150px;z-index:20}
+  .day.mine{box-shadow:inset 0 -2px 0 #7c5cff}
+  .day.mine.today{box-shadow:inset 0 0 0 1.5px var(--accent),inset 0 -3px 0 #7c5cff}
+  .mk-list{display:flex;flex-direction:column;gap:4px}
+  .mk-row{display:flex;align-items:center;gap:8px;background:var(--soft);border-radius:8px;padding:6px 9px;font-size:13px}
+  .mk-row b{font-weight:700}
+  .mk-row .k{font-size:11px;font-weight:700;border-radius:8px;padding:0 7px;color:#fff;background:#7c5cff}
+  .mk-row .k.off{background:var(--hol)}
+  .mk-row .grow{flex:1;color:var(--muted);font-size:12px}
   .imenu hr{border:0;border-top:1px solid var(--line);margin:3px 6px}
   .imenu button[disabled]{opacity:.45;cursor:default}
   .imenu button[disabled]:hover{background:transparent}
@@ -594,6 +602,7 @@
         <button data-s="look" class="active">配色</button>
         <button data-s="data">繼承</button>
         <button data-s="mail">回信</button>
+        <button data-s="work">上班</button>
         <button data-s="about">更新</button>
       </nav>
       <button class="x" id="sheetClose" title="關閉設定">×</button>
@@ -707,6 +716,25 @@
         <div class="desc" id="mailStatus" style="margin-top:10px"></div>
       </section>
 
+      <!-- 上班時間與補班補休 -->
+      <section id="s-work" class="hidden">
+        <div class="lab">下班時間</div>
+        <div class="card">
+          <div class="erow" style="margin:0"><span class="el">下班時間</span><input type="time" id="wOff"></div>
+          <label class="check-row" style="margin-top:6px"><input type="checkbox" class="chk" id="wRemind"><span>下班前提醒今天還沒完成的必做事項</span></label>
+          <div class="erow"><span class="el">提前</span><select id="wLead">
+            <option value="15">15 分鐘</option><option value="30">30 分鐘</option><option value="45">45 分鐘</option>
+            <option value="60">1 小時</option><option value="90">1.5 小時</option><option value="120">2 小時</option><option value="180">3 小時</option></select><span class="sub" id="wAt"></span></div>
+          <div class="desc" style="margin:4px 0 0">只在上班日提醒：週一到週五，扣掉日曆上的國定假日與補假，加上補班日；也會依照你自己標記的補班／補休。一則通知列出所有還沒勾選的必做事項。</div>
+          <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px"><button class="btn ghost" id="wTest">試試看提醒</button></div>
+        </div>
+        <div class="lab">自訂補班／補休</div>
+        <div class="card">
+          <div class="desc" style="margin-top:0">在日曆的日期上按右鍵：假日可「設為上班日（補班）」，上班日可「設為休假日（補休）」，兩個日期可以一起設定。自訂的日子在日曆上有紫色底線。</div>
+          <div class="mk-list" id="mkList"></div>
+        </div>
+      </section>
+
       <!-- 更新 -->
       <section id="s-about" class="hidden">
         <div class="card">
@@ -787,6 +815,8 @@
   state.deleted = state.deleted || {}; state.imports = state.imports || [];
   if (!state.imp || !Array.isArray(state.imp.cats)) state.imp = { cats: [], items: [] };
   if (!Array.isArray(state.doneLog)) state.doneLog = [];
+  if (!state.dayMarks || typeof state.dayMarks !== 'object') state.dayMarks = {};
+  state.work = Object.assign({ off: '18:00', lead: 60, remind: true }, state.work || {});
   if (!Array.isArray(state.history)) {               // 由現有事項建立輸入紀錄
     state.history = [];
     const all = [...state.tasks]; ALLP.forEach(([k]) => all.push(...state.required[k]));
@@ -976,11 +1006,15 @@
     HOL_YEARS = [...ys].sort();
   }
   buildHol();
-  const SHORT = { '開國紀念日': '元旦', '農曆除夕': '除夕', '和平紀念日': '228', '孔子誕辰紀念日/教師節': '教師節',
+  const SHORT = { '補班（自訂）': '補班', '補休（自訂）': '補休', '開國紀念日': '元旦', '農曆除夕': '除夕', '和平紀念日': '228', '孔子誕辰紀念日/教師節': '教師節',
     '臺灣光復暨金門古寧頭大捷紀念日': '光復節', '台灣光復暨金門古寧頭大捷紀念日': '光復節', '行憲紀念日': '行憲',
     '補行上班': '補班', '補行上班日': '補班', '勞動節': '勞動節', '兒童節': '兒童節' };
   const shortName = n => SHORT[n] || (n.length > 3 ? n.replace(/節$|紀念日$/, '').slice(0, 3) : n);
+  // 自訂補班／補休：state.dayMarks[日期] = { t: 'work'|'off'|null, pair: 對應日期, u }（t 為 null 代表已取消）
+  const markOf = k => { const m = state.dayMarks && state.dayMarks[k]; return m && m.t ? m : null; };
   function dayInfo(k) {
+    const mk = markOf(k);
+    if (mk) return mk.t === 'work' ? { off: false, name: '補班（自訂）', work: true, known: true, mine: true } : { off: true, name: '補休（自訂）', work: false, known: true, mine: true };
     const d = parseD(k), wk = d.getDay() === 0 || d.getDay() === 6, h = HOL[k];
     if (h) return { off: h.off, name: h.name, work: !h.off, known: true };
     return { off: wk, name: '', work: false, known: HOL_YEARS.includes(d.getFullYear()) };
@@ -1136,9 +1170,9 @@
     for (let i = 0; i < rows*7; i++) {
       const d = new Date(start); d.setDate(start.getDate() + i);
       const k = fmt(d), c = cnt[k];
-      const hi = state.holShow !== false ? dayInfo(k) : { off: false, name: '' };
-      const cls = ['day', d.getMonth() !== m && 'other', k === today && 'today', k === selDate && 'sel', hi.name && hi.off && 'off', hi.work && 'work'].filter(Boolean).join(' ');
-      const tip = hi.name ? ` title="${esc(hi.name)}"` : '';
+      const hi = state.holShow !== false || markOf(k) ? dayInfo(k) : { off: false, name: '' };
+      const cls = ['day', d.getMonth() !== m && 'other', k === today && 'today', k === selDate && 'sel', hi.name && hi.off && 'off', hi.work && 'work', hi.mine && 'mine'].filter(Boolean).join(' ');
+      const tip = ` title="${hi.name ? esc(hi.name) + '・' : ''}右鍵：設定補班／補休"`;
       const sp = ALLP.some(([sk]) => state.required[sk].some(r => datedOn(r, sk, k)));
       h += `<button class="${cls}" data-date="${k}"${tip}><span>${d.getDate()}</span>${hi.name ? `<span class="hl">${esc(shortName(hi.name))}</span>` : ''}${c ? `<i class="dot ${c.open ? '' : 'done'}"></i>` : ''}${sp ? '<i class="dot sp" title="有不定期／半年事項"></i>' : ''}</button>`;
     }
@@ -1173,11 +1207,12 @@
   function renderDay() {
     const d = parseD(selDate);
     const hi = dayInfo(selDate), hd = $('#holDay');
-    if (state.holShow !== false && (hi.name || hi.work)) {
+    if ((state.holShow !== false || hi.mine) && (hi.name || hi.work)) {
       const st = streak(selDate);
       hd.className = 'hol-day' + (hi.work ? ' work' : '');
-      hd.textContent = hi.work ? `💼 ${hi.name === '補行上班' ? '補行上班日' : hi.name}・要上班`
-        : `🎌 ${hi.name}・放假` + (st && st.len >= 3 ? `（${md(st.start)}–${md(st.end)} 連假 ${st.len} 天）` : '');
+      const pr = hi.mine && markOf(selDate).pair ? `（對應 ${md(parseD(markOf(selDate).pair))}）` : '';
+      hd.textContent = hi.work ? `💼 ${hi.name === '補行上班' ? '補行上班日' : hi.name}・要上班${pr}`
+        : `🎌 ${hi.name}・放假${pr}` + (st && st.len >= 3 ? `（${md(st.start)}–${md(st.end)} 連假 ${st.len} 天）` : '');
     } else hd.className = 'hol-day hidden';
     $('#dayTitle').textContent = `${d.getMonth()+1} 月 ${d.getDate()} 日（${WD[d.getDay()]}）` + (selDate === today ? '・今天' : '');
     const list = state.tasks.filter(t => t.date === selDate).sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
@@ -1195,13 +1230,19 @@
     renderPlanMust();
   }
   // 行程頁顯示今天還沒完成的必做事項（勾選完成後就不再顯示）
+  // 今天還沒完成的必做事項（行程頁與下班前提醒共用）
+  function todayMustRows() {
+    const rows = [];
+    ALLP.forEach(([k, n]) => state.required[k].forEach(r => { if (isOpen(r, k)) rows.push([k, n, r]); }));
+    // 今天剛好輪到、但還沒開始計算的不定期／半年也列出
+    SPECIAL.forEach(([k, n]) => state.required[k].forEach(r => { if (!rows.some(x => x[2] === r) && occursOn(r, k, today) && !isReqDone(r, k)) rows.push([k, n, r]); }));
+    return rows;
+  }
   function renderPlanMust() {
     const isToday = selDate === today;
-    const rows = [];
+    let rows = [];
     if (isToday) {
-      ALLP.forEach(([k, n]) => state.required[k].forEach(r => { if (isOpen(r, k)) rows.push([k, n, r]); }));
-      // 今天剛好輪到、但還沒開始計算的不定期／半年也列出
-      SPECIAL.forEach(([k, n]) => state.required[k].forEach(r => { if (!rows.some(x => x[2] === r) && occursOn(r, k, today) && !isReqDone(r, k)) rows.push([k, n, r]); }));
+      rows = todayMustRows();
     } else if (selDate > today) {
       // 未來日期：依各自週期提前顯示（該期已完成的就不顯示）
       ALLP.forEach(([k, n]) => state.required[k].forEach(r => { if (occursOnAll(r, k, selDate) && !doneOn(r, k, selDate)) rows.push([k, n, r]); }));
@@ -1590,6 +1631,13 @@
   }
   function askPermission() { try { if (!desktop && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {} }
 
+  const isWorkday = k => !dayInfo(k).off;
+  function offWorkNotify(rows, offAt) {
+    const left = Math.max(0, Math.round((offAt - new Date()) / 60000));
+    const names = rows.map(([, , r]) => r.text);
+    const list = names.slice(0, 5).join('、') + (names.length > 5 ? ` 等` : '');
+    notify('🕔 下班前提醒', `${state.work.off} 下班（還有 ${left >= 60 ? `${Math.floor(left / 60)} 小時${left % 60 ? ` ${left % 60} 分` : ''}` : `${left} 分鐘`}），還有 ${rows.length} 項必做未完成：${list}`);
+  }
   function checkReminders() {
     const n = new Date(), due = [];
     state.tasks.forEach(t => { if (!t.done && t.time) due.push({ key: `t|${t.id}|${t.date} ${t.time}`, at: dueOf(t.date, t.time), text: t.text, time: t.time }); });
@@ -1611,6 +1659,15 @@
       due.push({ key: `r|${r.id}|${fmt(c.end)} ${r.time}`, at: dueOf(fmt(c.end), r.time), text: `［不定期必做］${r.text}`, time: `${md(c.end)} ${r.time}` });
     });
     let changed = false;
+    // 下班前提醒：上班日、下班前 N 分鐘到下班之間，一天一次，彙總所有未完成的必做
+    const W = state.work;
+    if (W.remind !== false && W.off && isWorkday(today)) {
+      const offAt = dueOf(today, W.off), at = new Date(offAt - (+W.lead || 60) * 60000), key = `w|${today}`;
+      if (n >= at && n < offAt && !state.notified[key]) {
+        const rows = todayMustRows();
+        if (rows.length) { state.notified[key] = now(); changed = true; offWorkNotify(rows, offAt); }
+      }
+    }
     due.forEach(it => {
       const diff = it.at - n;
       if (diff > 0 && diff <= HOUR && !state.notified[it.key]) {
@@ -2344,11 +2401,11 @@
     switchSheet(tab);
     draft = Object.assign({}, currentTheme());
     selectTarget(target);
-    renderData(); renderUpdate(); renderMail(); renderHolSettings();
+    renderData(); renderUpdate(); renderMail(); renderHolSettings(); renderWork();
   }
   function switchSheet(s) {
     document.querySelectorAll('#sheetTabs button').forEach(b => b.classList.toggle('active', b.dataset.s === s));
-    ['look','data','mail','about'].forEach(k => $('#s-' + k).classList.toggle('hidden', k !== s));
+    ['look','data','mail','work','about'].forEach(k => $('#s-' + k).classList.toggle('hidden', k !== s));
     $('#sheetBody').scrollTop = 0;
   }
   $('#setBtn').onclick = () => $('#sheet').classList.contains('hidden') ? openSheet() : $('#sheet').classList.add('hidden');
@@ -2520,6 +2577,7 @@
       user: { id: state.user.id, name: state.user.name, created: state.user.created },
       data: { tasks: state.tasks, required: state.required, reqDone: state.reqDone, deleted: state.deleted,
               theme: state.theme, themeU: state.themeU || 0, history: state.history, imp: state.imp, doneLog: state.doneLog,
+              dayMarks: state.dayMarks, work: state.work,
               csr: window.CSR ? CSR.exportData() : undefined } };
   }
   $('#exportBtn').onclick = async () => {
@@ -2583,7 +2641,10 @@
     const iL = local.imp || { cats: [], items: [] }, iI = inc.imp || { cats: [], items: [] };
     const imp = { cats: mergeList(iL.cats || [], iI.cats), items: mergeList(iL.items || [], iI.items), pads: mergeList(iL.pads || [], iI.pads) };
     const doneLog = mergeList(local.doneLog || [], inc.doneLog || []);
-    return { result: { tasks, required, reqDone, deleted, theme, themeU, history, imp, doneLog }, st };
+    const dayMarks = Object.assign({}, local.dayMarks || {});
+    for (const k in inc.dayMarks || {}) if (((inc.dayMarks[k] || {}).u || 0) > ((dayMarks[k] || {}).u || 0)) dayMarks[k] = inc.dayMarks[k];
+    const work = ((inc.work || {}).u || 0) > ((local.work || {}).u || 0) ? Object.assign({}, local.work, inc.work) : local.work;
+    return { result: { tasks, required, reqDone, deleted, theme, themeU, history, imp, doneLog, dayMarks, work }, st };
   }
 
   function handleImport(text) {
@@ -2642,6 +2703,74 @@
   function showModal(html) { $('#modalBox').innerHTML = html; $('#modal').classList.remove('hidden'); }
   function closeModal() { $('#modal').classList.add('hidden'); }
   $('#modal').addEventListener('click', e => { if (e.target.id === 'modal' || e.target.hasAttribute('data-close')) closeModal(); });
+
+  // ================= 上班時間與自訂補班補休 =================
+  function renderWork() {
+    const W = state.work;
+    $('#wOff').value = W.off || '18:00';
+    $('#wRemind').checked = W.remind !== false;
+    $('#wLead').value = String(W.lead || 60);
+    if (!$('#wLead').value) { const o = document.createElement('option'); o.value = W.lead; o.textContent = W.lead + ' 分鐘'; $('#wLead').appendChild(o); $('#wLead').value = String(W.lead); }
+    const at = W.off ? new Date(dueOf(today, W.off) - (+W.lead || 60) * 60000) : null;
+    $('#wAt').textContent = at && W.remind !== false ? `每個上班日 ${pad(at.getHours())}:${pad(at.getMinutes())} 提醒` : '';
+    ['#wLead'].forEach(id => $(id).disabled = W.remind === false);
+    const ks = Object.keys(state.dayMarks).filter(k => markOf(k)).sort();
+    $('#mkList').innerHTML = ks.length ? ks.map(k => { const m = markOf(k), d = parseD(k);
+      return `<div class="mk-row"><span class="k ${m.t === 'off' ? 'off' : ''}">${m.t === 'work' ? '補班' : '補休'}</span><b>${fmtYMD(k)}（${WD[d.getDay()]}）</b><span class="grow">${m.pair && markOf(m.pair) ? `對應 ${md(parseD(m.pair))}` : ''}</span><button class="ni danger" data-mk="${k}" title="取消這個標記">×</button></div>`; }).join('')
+      : '<div class="nempty">還沒有自訂的補班／補休</div>';
+  }
+  const setWork = () => { state.work.u = now(); save(); renderWork(); checkReminders(); };
+  $('#wOff').onchange = () => { if ($('#wOff').value) { state.work.off = $('#wOff').value; setWork(); } };
+  $('#wRemind').onchange = () => { state.work.remind = $('#wRemind').checked; setWork(); };
+  $('#wLead').onchange = () => { state.work.lead = +$('#wLead').value || 60; setWork(); };
+  $('#wTest').onclick = () => {
+    askPermission();
+    const rows = todayMustRows();
+    if (!rows.length) { toast('🕔 下班前提醒（測試）', '今天的必做事項都完成了，實際提醒時不會通知', 5000); return; }
+    offWorkNotify(rows, dueOf(today, state.work.off || '18:00'));
+  };
+  $('#mkList').onclick = e => { const b = e.target.closest('[data-mk]'); if (b) unmarkDay(b.dataset.mk); };
+  function unmarkDay(k) {
+    const m = markOf(k); if (!m) return;
+    const ks = [k]; if (m.pair && markOf(m.pair) && markOf(m.pair).pair === k) ks.push(m.pair);
+    ks.forEach(x => state.dayMarks[x] = { t: null, u: now() });
+    save(); renderCal(); renderDay(); renderWork(); checkReminders();
+    toast('已取消自訂標記', ks.map(x => md(parseD(x))).join('、'), 2500);
+  }
+  // 日曆右鍵：設定補班／補休（可一併設定對應的日期）
+  function markDialog(k) {
+    const base = (() => { const m = markOf(k); if (m) state.dayMarks[k] = { t: null, u: 0 }; const r = dayInfo(k); if (m) state.dayMarks[k] = m; return r; })();
+    const toWork = base.off, d = parseD(k);
+    const label = toWork ? '設為上班日（補班）' : '設為休假日（補休）', pairLabel = toWork ? '補休' : '補班';
+    showModal(`<h3>${label}</h3>
+      <div class="confirm-item">${fmtYMD(k)}（${WD[d.getDay()]}）<small>${base.name ? esc(base.name) + '・' : ''}原本${toWork ? '放假' : '要上班'}，設定後改為${toWork ? '要上班' : '放假'}</small></div>
+      <label class="check-row"><input type="checkbox" class="chk" id="mkPairOn"><span>同時設定${pairLabel}日</span></label>
+      <div class="erow"><span class="el">${pairLabel}日</span><input type="date" id="mkPair" disabled></div>
+      <div class="desc">只影響「上班日」的判斷（下班前提醒、日曆標示），不會改動行程或必做事項。</div>
+      <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="mkOk">確定</button></div>`);
+    $('#mkPairOn').onchange = () => { $('#mkPair').disabled = !$('#mkPairOn').checked; if ($('#mkPairOn').checked) $('#mkPair').focus(); };
+    $('#mkOk').onclick = () => {
+      const pk = $('#mkPairOn').checked ? $('#mkPair').value : '';
+      if ($('#mkPairOn').checked && !pk) { toast(`請選擇${pairLabel}日期`, '', 3000); return; }
+      if (pk === k) { toast('兩個日期不能相同', '', 3000); return; }
+      if (pk && !dayInfo(pk).off === !toWork) { toast(`${md(parseD(pk))} 本來就${toWork ? '放假' : '要上班'}`, `${pairLabel}日要選一個原本${toWork ? '要上班' : '放假'}的日子`, 4500); return; }
+      state.dayMarks[k] = { t: toWork ? 'work' : 'off', pair: pk || undefined, u: now() };
+      if (pk) state.dayMarks[pk] = { t: toWork ? 'off' : 'work', pair: k, u: now() };
+      save(); closeModal(); renderCal(); renderDay(); checkReminders();
+      if (!$('#sheet').classList.contains('hidden')) renderWork();
+      toast(toWork ? '💼 已設為上班日' : '🏖️ 已設為休假日', `${md(d)}${pk ? `，${pairLabel} ${md(parseD(pk))}` : ''}`, 3500);
+    };
+  }
+  $('#calGrid').addEventListener('contextmenu', e => {
+    const b = e.target.closest('.day'); if (!b) return;
+    const k = b.dataset.date, m = markOf(k), hi = dayInfo(k);
+    ctxMenu(e, [
+      m ? ['↩️ 取消自訂' + (m.t === 'work' ? '補班' : '補休') + (m.pair && markOf(m.pair) ? `（連同 ${md(parseD(m.pair))}）` : ''), () => unmarkDay(k)]
+        : hi.off ? ['💼 設為上班日（補班）…', () => markDialog(k)] : ['🏖️ 設為休假日（補休）…', () => markDialog(k)],
+      '-',
+      ['⚙ 下班時間與提醒設定', () => openSheet('work')]
+    ]);
+  });
 
   // ================= 假期設定 =================
   function renderHolSettings() {
