@@ -109,6 +109,29 @@
   .erow input[type=number]{width:60px}
   .btn.danger{background:var(--warn);color:#fff}
   .sp-ico{width:18px;text-align:center;flex-shrink:0;font-size:13px}
+  .subs{flex-basis:100%;margin:5px 0 0 26px;display:flex;flex-direction:column;gap:1px;border-left:2px solid var(--line);padding-left:8px}
+  .srow{display:flex;align-items:center;gap:7px;padding:3px 3px;border-radius:6px;font-size:13px}
+  .srow:hover{background:var(--soft)}
+  .srow .chk{width:15px;height:15px;border-radius:4px}
+  .srow .chk:checked::after{width:4px;height:8px}
+  .srow .st{flex:1;min-width:0;word-break:break-word;line-height:1.4}
+  .srow.sdone .st{text-decoration:line-through;color:var(--muted)}
+  .srow .sacts{display:flex;gap:1px;opacity:0;flex-shrink:0}
+  .srow:hover .sacts{opacity:1}
+  .srow input.sin{flex:1;min-width:0;padding:3px 6px;font-size:13px}
+  .sadd{border:0;background:transparent;color:var(--muted);font-size:12px;text-align:left;padding:3px 3px;border-radius:6px}
+  .sadd:hover{color:var(--accent);background:var(--soft)}
+  .subs.archived{opacity:.8}
+  .subs .arch{font-size:10.5px;color:var(--muted);padding:1px 3px}
+  .sprog{font-size:11px;color:var(--muted);background:var(--soft);border-radius:9px;padding:1px 7px;flex-shrink:0}
+  .logday{font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 4px}
+  .logrow{background:var(--soft);border-radius:8px;padding:7px 9px;margin-bottom:5px;font-size:13px}
+  .logrow b{font-weight:600}
+  .logrow small{color:var(--muted);font-size:11px;margin-left:4px}
+  .logrow ul{margin:4px 0 0;padding-left:6px;list-style:none;font-size:12px;color:var(--muted)}
+  .logrow li.ok{color:var(--ok)}
+  .loglist{max-height:55vh;overflow-y:auto;margin:6px 0}
+  .linkbtn2{border:0;background:none;color:var(--accent);font-size:11px;padding:0;margin-top:6px;cursor:pointer}
   .must-sec{margin-top:14px}
   .must-sec h2{font-size:14px}
   #planMust .item{border-style:dashed;border-left-style:solid}
@@ -499,6 +522,7 @@
         <div class="row"><span class="lbl" id="periodLabel"></span><span class="cnt" id="periodCount"></span></div>
         <div class="pbar"><i id="periodBar"></i></div>
         <div class="hint" id="periodHint"></div>
+        <button class="linkbtn2" id="logBtn">📜 完成紀錄</button>
       </div>
       <div class="opts hidden" id="mustOpts"></div>
       <form class="add" id="addMust">
@@ -702,7 +726,7 @@
   // ================= 資料 =================
   const blankReq = () => ({daily:[],weekly:[],monthly:[],quarterly:[],yearly:[],irregular:[],halfyear:[]});
   const blank = () => ({ v: 2, user: null, tasks: [], required: blankReq(), reqDone: {}, deleted: {},
-                         notified: {}, pinned: false, calOpen: true, theme: null, imports: [], history: null, imp: null });
+                         notified: {}, pinned: false, calOpen: true, theme: null, imports: [], history: null, imp: null, doneLog: [] });
   let state = blank();
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
@@ -714,6 +738,7 @@
   ALLP.forEach(([k]) => state.required[k].forEach(r => { if (r.u == null) r.u = 0; }));
   state.deleted = state.deleted || {}; state.imports = state.imports || [];
   if (!state.imp || !Array.isArray(state.imp.cats)) state.imp = { cats: [], items: [] };
+  if (!Array.isArray(state.doneLog)) state.doneLog = [];
   if (!Array.isArray(state.history)) {               // 由現有事項建立輸入紀錄
     state.history = [];
     const all = [...state.tasks]; ALLP.forEach(([k]) => all.push(...state.required[k]));
@@ -1135,19 +1160,118 @@
         <input type="checkbox" class="chk" title="完成">
         <span class="meta">${n}</span>
         ${itemBody(r, meta)}
-        ${tag ? `<span class="tag">${tag}</span>` : ''}</li>`;
+        ${tag ? `<span class="tag">${tag}</span>` : ''}${subProg(r, k)}</li>`;
     }).join('');
   }
   // 必做勾選完成前再確認一次
-  function confirmDone(r, p) {
+  // ===== 第二階層：細節須做事項 =====
+  let subAddFor = null, subEdit = null;
+  const subsOf = r => Array.isArray(r.subs) ? r.subs : [];
+  const subKey = (r, p, sb) => `${reqKey(r, p)}|${sb.id}`;
+  const subDone = (r, p, sb) => (state.reqDone[subKey(r, p, sb)] || 0) > 0;
+  const logOf = (r, p) => { const k = reqKey(r, p); return [...state.doneLog].reverse().find(l => l.rid === r.id && l.key === k); };
+  function subProg(r, p) {
+    const ss = subsOf(r);
+    if (isReqDone(r, p)) { const lg = logOf(r, p); if (lg && lg.subs.length) return `<span class="sprog">細節 ${lg.subs.filter(x => x.done).length}/${lg.subs.length}</span>`; }
+    if (!ss.length) return '';
+    return `<span class="sprog">細節 ${ss.filter(sb => subDone(r, p, sb)).length}/${ss.length}</span>`;
+  }
+  function subsBlock(r, p, dn) {
+    const ss = subsOf(r);
+    if (dn) {                                      // 已完成：顯示完成當下封存的細節，之後增減不影響
+      const lg = logOf(r, p);
+      const arr = lg ? lg.subs : ss.map(sb => ({ t: sb.t, done: subDone(r, p, sb) }));
+      const arch = arr.length ? `<div class="subs archived"><div class="arch">🔒 完成時的細節紀錄${lg ? `（${dt(lg.at)}）` : ''}</div>${arr.map(x => `<div class="srow ${x.done ? 'sdone' : ''}"><input type="checkbox" class="chk" ${x.done ? 'checked' : ''} disabled><span class="st">${esc(x.t)}</span></div>`).join('')}</div>` : '';
+      const add = subAddFor === r.id
+        ? `<div class="subs" data-rid="${r.id}"><div class="arch">之後的細節（下一期開始，共 ${ss.length} 項）</div>${ss.map(sb => `<div class="srow" data-sid="${sb.id}"><span class="st">• ${esc(sb.t)}</span></div>`).join('')}
+            <div class="srow"><input class="field sin snew" placeholder="新增細節（下一期開始），按 Enter" autocomplete="off"><button class="okbtn" data-sa="add" title="加入">${ICON_OK}</button><button class="ni" data-sa="close" title="結束新增">×</button></div></div>`
+        : '';
+      return arch + add;
+    }
+    if (!ss.length && subAddFor !== r.id) return '';
+    return `<div class="subs" data-rid="${r.id}">${ss.map(sb => subEdit === sb.id
+        ? `<div class="srow" data-sid="${sb.id}"><input class="field sin" value="${esc(sb.t)}"><button class="okbtn" data-sa="save" title="編輯完成"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button class="ni" data-sa="cancel" title="取消">×</button></div>`
+        : `<div class="srow ${subDone(r, p, sb) ? 'sdone' : ''}" data-sid="${sb.id}"><input type="checkbox" class="chk schk" ${subDone(r, p, sb) ? 'checked' : ''}><span class="st" title="雙擊編輯">${esc(sb.t)}</span>
+            <span class="sacts"><button class="ni" data-sa="edit" title="編輯">${ICON_EDIT}</button><button class="ni" data-sa="copy" title="複製">${ICON_COPY}</button><button class="ni danger" data-sa="del" title="刪除">×</button></span></div>`).join('')}
+      ${subAddFor === r.id
+        ? `<div class="srow"><input class="field sin snew" placeholder="新增細節，按 Enter 加入" autocomplete="off"><button class="okbtn" data-sa="add" title="加入"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button class="ni" data-sa="close" title="結束新增">×</button></div>`
+        : `<button class="sadd" data-sa="open">＋ 新增細節</button>`}</div>`;
+  }
+  // 回傳 true 代表這次點擊是細節相關操作
+  function focusNow(sel) { const el = document.querySelector(sel); if (el) { el.focus(); if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length); } }
+  function subClick(e, r, p) {
+    const t = e.target, box = t.closest('.subs'); if (!box) return false;
+    if (box.classList.contains('archived')) return true;
+    const row = t.closest('.srow'), sb = row && row.dataset.sid ? subsOf(r).find(x => x.id === row.dataset.sid) : null;
+    const a = t.closest('[data-sa]') && t.closest('[data-sa]').dataset.sa;
+    const touch = () => { r.u = now(); save(); };
+    if (t.classList.contains('schk') && sb) {
+      state.reqDone[subKey(r, p, sb)] = t.checked ? now() : -now(); save(); renderAll();
+      const ss = subsOf(r);
+      if (t.checked && ss.length && ss.every(x => subDone(r, p, x)) && !isReqDone(r, p)) setTimeout(() => confirmDone(r, p, true), 150);
+      return true;
+    }
+    if (a === 'open') { subAddFor = r.id; subEdit = null; renderAll(); focusNow(`.subs[data-rid="${r.id}"] .snew`); }
+    if (a === 'close') { subAddFor = null; renderAll(); }
+    if (a === 'add') {
+      const inp = box.querySelector('.snew'), v = inp.value.trim();
+      if (v) { r.subs = [...subsOf(r), { id: uid(), t: v }]; touch(); renderAll(); }
+      focusNow(`.subs[data-rid="${r.id}"] .snew`);
+    }
+    if (a === 'edit' && sb) { subEdit = sb.id; renderAll(); focusNow(`.subs[data-rid="${r.id}"] .sin`); }
+    if (a === 'cancel') { subEdit = null; renderAll(); }
+    if (a === 'save' && sb) { const v = row.querySelector('.sin').value.trim(); if (v) { sb.t = v; touch(); } subEdit = null; renderAll(); }
+    if (a === 'copy' && sb) { const ss = subsOf(r), i = ss.indexOf(sb); ss.splice(i + 1, 0, { id: uid(), t: sb.t }); r.subs = ss; touch(); renderAll(); toast('📄 已複製細節', sb.t, 2000); }
+    if (a === 'del' && sb) {
+      showModal(`<h3>確定刪除這個細節？</h3><div class="confirm-item">${esc(sb.t)}<small>屬於「${esc(r.text)}」</small></div>
+        <div class="desc">已完成的紀錄不受影響，只會從之後的週期移除。</div>
+        <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn danger" id="subDelOk">🗑️ 刪除</button></div>`);
+      $('#subDelOk').onclick = () => { r.subs = subsOf(r).filter(x => x !== sb); touch(); closeModal(); renderAll(); };
+    }
+    return true;
+  }
+  function subKeys(e, r, p) {
+    const t = e.target; if (!t.classList.contains('sin')) return false;
+    const box = t.closest('.subs');
+    if (e.key === 'Enter') { e.preventDefault(); (t.classList.contains('snew') ? box.querySelector('[data-sa=add]') : t.closest('.srow').querySelector('[data-sa=save]')).click(); }
+    if (e.key === 'Escape') { subAddFor = null; subEdit = null; renderAll(); }
+    return true;
+  }
+  // 完成時封存當下的細節，之後細節增減不影響已完成的紀錄
+  function logDone(r, p) {
+    state.doneLog.push({ id: uid(), rid: r.id, p, key: reqKey(r, p), text: r.text, at: now(), u: now(),
+      subs: subsOf(r).map(sb => ({ t: sb.t, done: subDone(r, p, sb) })) });
+  }
+  function unlogDone(r, p) {
+    const k = reqKey(r, p);
+    state.doneLog.filter(l => l.rid === r.id && l.key === k).forEach(l => state.deleted[l.id] = now());
+    state.doneLog = state.doneLog.filter(l => !(l.rid === r.id && l.key === k));
+  }
+  function showLog(rid) {
+    const list = [...state.doneLog].filter(l => !rid || l.rid === rid).sort((a, b) => b.at - a.at).slice(0, 300);
+    let last = '', h = '';
+    list.forEach(l => {
+      const d = new Date(l.at), day = `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}（${WD[d.getDay()]}）`;
+      if (day !== last) { h += `<div class="logday">${day}</div>`; last = day; }
+      h += `<div class="logrow"><b>${esc(l.text)}</b><small>${pName(l.p)}必做・${pad(d.getHours())}:${pad(d.getMinutes())}</small>
+        ${l.subs.length ? `<ul>${l.subs.map(x => `<li class="${x.done ? 'ok' : ''}">${x.done ? '✓' : '○'} ${esc(x.t)}</li>`).join('')}</ul>` : ''}</div>`;
+    });
+    const r = rid && ALLP.map(([k]) => state.required[k].find(x => x.id === rid)).find(Boolean);
+    showModal(`<h3>📜 ${r ? `「${esc(r.text)}」的` : ''}完成紀錄</h3>
+      <div class="desc" style="margin:0">共 ${list.length} 筆。每次勾選完成時會封存當下的細節狀態，之後新增或刪除細節都不會改變這些紀錄。</div>
+      <div class="loglist">${h || '<div class="imp-empty">還沒有完成紀錄</div>'}</div>
+      <div class="row-end"><button class="btn ghost" data-close>關閉</button></div>`);
+  }
+  function confirmDone(r, p, fromSubs) {
     const meta = reqMeta(r, p);
     showModal(`<h3>確認完成？</h3>
       <div class="confirm-item">${esc(r.text)}<small>${pName(p)}必做${meta ? '・' + esc(meta) : ''}</small></div>
-      <div class="desc">確定這件事已經完成了嗎？</div>
+      ${subsOf(r).length ? `<div class="desc" style="margin:0 0 4px">細節：${subsOf(r).filter(sb => subDone(r, p, sb)).length}/${subsOf(r).length} 已完成${fromSubs ? '，全部細節都勾完了' : ''}</div>` : ''}
+      <div class="desc">確定這件事已經完成了嗎？完成時的細節會被封存成紀錄。</div>
       <div class="row-end"><button class="btn ghost" data-close>還沒，取消</button>
         <button class="btn okb" id="confirmDoneBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>確定完成</button></div>`);
     $('#confirmDoneBtn').onclick = () => {
-      state.reqDone[reqKey(r, p)] = now(); save(); closeModal(); renderAll();
+      state.reqDone[reqKey(r, p)] = now(); logDone(r, p); subAddFor = null; save(); closeModal(); renderAll();
       toast('✅ 已完成', r.text, 2500);
     };
     setTimeout(() => $('#confirmDoneBtn') && $('#confirmDoneBtn').focus(), 0);
@@ -1190,7 +1314,7 @@
         ${meta && meta.length <= 12 ? `<span class="meta">${meta}</span>` : ''}
         ${itemBody(r, meta && meta.length > 12 ? meta : '')}
         ${tag ? `<span class="tag">${tag}</span>` : ''}
-        ${noteBtn(r)}<button class="more2" title="編輯／複製／刪除">⋯</button>${notePanel(r)}</li>`;
+        ${subProg(r, must)}${noteBtn(r)}<button class="more2" title="編輯／複製／刪除">⋯</button>${notePanel(r)}${subsBlock(r, must, dn)}</li>`;
     }).join('') : `<li class="empty">還沒有${pName(must)}必辦事項</li>`;
   }
   function renderOpts() {
@@ -1588,15 +1712,23 @@
   $('#mustList').addEventListener('click', e => {
     const li = e.target.closest('.item'); if (!li) return;
     const r = state.required[must].find(x => x.id === li.dataset.id); if (!r) return;
+    if (subClick(e, r, must)) return;
     if (noteClick(e, r, renderMust)) return;
     if (e.target.classList.contains('chk')) {
       if (e.target.checked) { e.target.checked = false; confirmDone(r, must); }
-      else { state.reqDone[reqKey(r, must)] = -now(); save(); renderAll(); }
+      else { state.reqDone[reqKey(r, must)] = -now(); unlogDone(r, must); save(); renderAll(); }
     }
     const mb = e.target.closest('.more2'); if (mb) openItemMenu(mb, 'req', r.id, must);
   });
+  $('#mustList').addEventListener('keydown', e => {
+    const li = e.target.closest('.item'); const r = li && state.required[must].find(x => x.id === li.dataset.id);
+    if (r) subKeys(e, r, must);
+  });
+  $('#logBtn').onclick = () => showLog(null);
   $('#mustList').addEventListener('dblclick', e => {
     const li0 = e.target.closest('.item'); const r0 = li0 && state.required[must].find(x => x.id === li0.dataset.id);
+    const sst = e.target.closest('.subs:not(.archived) .st');
+    if (r0 && sst) { subEdit = sst.closest('.srow').dataset.sid; renderAll(); focusNow(`.subs[data-rid="${r0.id}"] .sin`); return; }
     if (r0 && noteDbl(e, r0, renderMust)) return;
     const span = e.target.closest('.text'); if (!span) return;
     const r = state.required[must].find(x => x.id === span.closest('.item').dataset.id);
@@ -1673,7 +1805,7 @@
     const wasOpen = btn.classList.contains('open'); closeMenu(); if (wasOpen) return;
     btn.classList.add('open');
     const m = document.createElement('div'); m.className = 'imenu';
-    m.innerHTML = `<button data-m="edit">✏️ 編輯</button><button data-m="copy">📄 複製</button><button data-m="del" class="danger">🗑️ 刪除</button>`;
+    m.innerHTML = `<button data-m="edit">✏️ 編輯</button>${kind === 'req' ? '<button data-m="sub">➕ 新增細節</button>' : ''}<button data-m="copy">📄 複製</button>${kind === 'req' ? '<button data-m="log">📜 完成紀錄</button>' : ''}<button data-m="del" class="danger">🗑️ 刪除</button>`;
     const app = $('#app'); app.appendChild(m);
     const r = btn.getBoundingClientRect(), a = app.getBoundingClientRect();
     m.style.right = (a.right - r.right) + 'px';
@@ -1708,7 +1840,7 @@
           save(); closeModal(); renderAll(); toast('📄 已複製', `${x.text} → ${md(parseD(date))}`, 3000);
         };
       } else {
-        const c = JSON.parse(JSON.stringify(x)); c.id = uid(); c.u = now(); c.notes = cloneNotes(x); c.star = false;
+        const c = JSON.parse(JSON.stringify(x)); c.id = uid(); c.u = now(); c.notes = cloneNotes(x); c.star = false; c.subs = subsOf(x).map(sb => ({ id: uid(), t: sb.t }));
         const arr = state.required[p]; arr.splice(arr.indexOf(x) + 1, 0, c);
         save(); renderAll(); toast('📄 已複製一份', x.text, 2500);
         itemAction('edit', 'req', c.id, p);
@@ -1716,6 +1848,11 @@
       return;
     }
     if (act === 'edit') openEdit(kind, x, p);
+    if (act === 'sub') {
+      if (isReqDone(x, p)) toast('這一期已完成', '新增的細節會從下一期開始；已完成的紀錄不受影響', 4000);
+      subAddFor = x.id; subEdit = null; renderAll(); focusNow(`.subs[data-rid="${x.id}"] .snew`);
+    }
+    if (act === 'log') showLog(x.id);
   }
   // 編輯視窗
   function openEdit(kind, x, p) {
@@ -2115,7 +2252,7 @@
     return { app: 'FloatingTodo', format: 1, exportedAt: now(),
       user: { id: state.user.id, name: state.user.name, created: state.user.created },
       data: { tasks: state.tasks, required: state.required, reqDone: state.reqDone, deleted: state.deleted,
-              theme: state.theme, themeU: state.themeU || 0, history: state.history, imp: state.imp } };
+              theme: state.theme, themeU: state.themeU || 0, history: state.history, imp: state.imp, doneLog: state.doneLog } };
   }
   $('#exportBtn').onclick = async () => {
     if (!state.user.name) { $('#userName').focus(); toast('請先輸入使用者名稱', '換電腦匯入時會用名稱和 ID 確認是不是同一個人', 5000); return; }
@@ -2177,7 +2314,8 @@
     });
     const iL = local.imp || { cats: [], items: [] }, iI = inc.imp || { cats: [], items: [] };
     const imp = { cats: mergeList(iL.cats || [], iI.cats), items: mergeList(iL.items || [], iI.items), pads: mergeList(iL.pads || [], iI.pads) };
-    return { result: { tasks, required, reqDone, deleted, theme, themeU, history, imp }, st };
+    const doneLog = mergeList(local.doneLog || [], inc.doneLog || []);
+    return { result: { tasks, required, reqDone, deleted, theme, themeU, history, imp, doneLog }, st };
   }
 
   function handleImport(text) {
@@ -2360,7 +2498,7 @@
   setInterval(tick, 1000);
   setInterval(() => {
     checkReminders();
-    const busy = document.activeElement && document.activeElement.closest && document.activeElement.closest('.note-panel');
+    const busy = document.activeElement && document.activeElement.closest && document.activeElement.closest('.note-panel, .subs');
     if (!document.querySelector('[contenteditable=true]') && !noteEdit && !busy) { renderDay(); renderMust(); renderBadges(); }
   }, 30000);
 })();
