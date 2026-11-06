@@ -26,7 +26,7 @@
     font-family:"Microsoft JhengHei UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;font-size:14px}
   body.browser{display:flex;justify-content:center;align-items:flex-start;padding:16px;background:#d9d5cc}
   body.browser .app{width:380px;height:720px;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
-  .app{position:relative;display:flex;flex-direction:column;height:100%;overflow:hidden;border:1px solid var(--line)}
+  .app{position:relative;display:flex;flex-direction:column;height:100%;overflow:hidden;overflow:clip;border:1px solid var(--line)}
   button{font:inherit;color:inherit;cursor:pointer}
   input,select{font:inherit;color:inherit}
   .hidden{display:none !important}
@@ -206,6 +206,42 @@
   .item .sub-meta{align-self:flex-start;font-weight:500}
   .note-pv{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
   .note-pv:hover{color:var(--accent)}
+  .stbtn{border:0;background:transparent;color:var(--muted);width:22px;height:22px;border-radius:5px;flex-shrink:0;display:grid;place-items:center;opacity:0}
+  .item:hover .stbtn{opacity:.75}
+  .stbtn:hover{background:var(--soft);opacity:1}
+  .stbtn.on{opacity:1;color:#e8a317}
+  .item.starred{box-shadow:inset 0 0 0 1px color-mix(in srgb,#e8a317 45%,transparent)}
+  /* 重要注意事項 / 公司 */
+  .ph-title{flex:1;padding:0 12px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px}
+  .imp-cats{display:flex;gap:5px;overflow-x:auto;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--card);flex-shrink:0}
+  .imp-cats::-webkit-scrollbar{height:4px}
+  .imp-cats::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+  .ccat{white-space:nowrap;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:4px 11px;font-size:12px;flex-shrink:0}
+  .ccat:hover{background:var(--soft)}
+  .ccat.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+  .ccat .n{opacity:.7;margin-left:4px;font-weight:400}
+  .ccat.add{border-style:dashed;color:var(--muted)}
+  .ccat-in{border:1px solid var(--accent);border-radius:14px;padding:3px 10px;font-size:12px;width:110px;flex-shrink:0;background:var(--card)}
+  .cat-head{display:flex;align-items:center;gap:6px;margin:0 2px 8px}
+  .cat-head b{flex:1;font-size:15px}
+  .cat-head input{flex:1;padding:5px 8px}
+  .pad{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;border-left:4px solid color-mix(in srgb,var(--accent) 55%,var(--card))}
+  .prow{display:flex;gap:8px;align-items:flex-start;padding:8px 8px 8px 10px;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.5}
+  .prow:last-child{border-bottom:0}
+  .prow:hover{background:var(--soft)}
+  .prow .pn{color:var(--muted);font-size:11px;min-width:16px;text-align:right;padding-top:2px;font-variant-numeric:tabular-nums}
+  .prow .pt{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word;user-select:text;cursor:text}
+  .prow .pin2{flex:1;padding:4px 6px;font-size:13px}
+  .prow .pd{font-size:11px;color:var(--muted);white-space:nowrap;padding-top:2px}
+  .prow.link{cursor:pointer}
+  .prow.link .pt{cursor:pointer}
+  .prow.done .pt{text-decoration:line-through;color:var(--muted)}
+  .prow .acts{display:flex;gap:1px;opacity:.35;flex-shrink:0}
+  .prow:hover .acts{opacity:1}
+  .imp-empty{text-align:center;color:var(--muted);font-size:13px;padding:22px 10px;line-height:1.6}
+  .placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--muted);padding:60px 20px;font-size:13px;line-height:1.6}
+  .placeholder .big{font-size:44px;line-height:1}
+  .placeholder b{font-size:16px;color:var(--ink)}
   .nbtn{border:0;background:transparent;color:var(--muted);width:22px;height:22px;border-radius:5px;flex-shrink:0;display:grid;place-items:center;opacity:0}
   .item:hover .nbtn,.nbtn.has,.nbtn.open{opacity:.75}
   .nbtn.has{color:var(--accent)}
@@ -344,6 +380,12 @@
     </button>
     <div class="title">代辦事項</div>
     <div class="spacer"></div>
+    <button id="coBtn" class="icon" title="關於公司的小事">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M16 9h2a2 2 0 0 1 2 2v10"/><path d="M9 7h3M9 11h3M9 15h3"/></svg>
+    </button>
+    <button id="impBtn" class="icon" title="重要注意事項">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+    </button>
     <button id="setBtn" class="icon" title="設定：配色、繼承資料、更新">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -571,6 +613,18 @@
     </div>
   </div>
 
+  <!-- 重要注意事項 -->
+  <div class="sheet hidden" id="impSheet">
+    <div class="sheet-head"><div class="ph-title">⚠️ 重要注意事項</div><button class="x" data-close-panel title="關閉">×</button></div>
+    <div class="imp-cats" id="impCats"></div>
+    <div class="sheet-body" id="impBody"></div>
+  </div>
+  <!-- 關於公司的小事 -->
+  <div class="sheet hidden" id="coSheet">
+    <div class="sheet-head"><div class="ph-title">🏢 關於公司的小事</div><button class="x" data-close-panel title="關閉">×</button></div>
+    <div class="sheet-body"><div class="placeholder"><span class="big">🏢</span><b>關於公司的小事</b><span>這個頁面已經預留好位置，<br>之後再一起設計內容。</span></div></div>
+  </div>
+
   <div class="modal hidden" id="modal"><div class="modal-box" id="modalBox"></div></div>
 </div>
 <div id="toasts"></div>
@@ -597,7 +651,7 @@
   // ================= 資料 =================
   const blankReq = () => ({daily:[],weekly:[],monthly:[],quarterly:[],yearly:[],irregular:[],halfyear:[]});
   const blank = () => ({ v: 2, user: null, tasks: [], required: blankReq(), reqDone: {}, deleted: {},
-                         notified: {}, pinned: false, calOpen: true, theme: null, imports: [], history: null });
+                         notified: {}, pinned: false, calOpen: true, theme: null, imports: [], history: null, imp: null });
   let state = blank();
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
@@ -608,6 +662,7 @@
   state.tasks.forEach(t => { if (t.u == null) t.u = 0; });
   ALLP.forEach(([k]) => state.required[k].forEach(r => { if (r.u == null) r.u = 0; }));
   state.deleted = state.deleted || {}; state.imports = state.imports || [];
+  if (!state.imp || !Array.isArray(state.imp.cats)) state.imp = { cats: [], items: [] };
   if (!Array.isArray(state.history)) {               // 由現有事項建立輸入紀錄
     state.history = [];
     const all = [...state.tasks]; ALLP.forEach(([k]) => all.push(...state.required[k]));
@@ -940,12 +995,12 @@
     $('#dayCount').textContent = list.length ? `完成 ${done}/${list.length}` : '';
     $('#taskList').innerHTML = list.length ? list.map(t => {
       const st = status(t.done, t.date, t.time);
-      return `<li class="item ${t.done ? 'done' : ''} ${st}" data-id="${t.id}">
+      return `<li class="item ${t.done ? 'done' : ''} ${st} ${t.star ? 'starred' : ''}" data-id="${t.id}">
         <input type="checkbox" class="chk" ${t.done ? 'checked' : ''} title="完成">
         <span class="time">${t.time || '全天'}</span>
         ${itemBody(t)}
         ${st ? `<span class="tag">${tagText[st]}</span>` : ''}
-        ${noteBtn(t)}<button class="del" title="刪除">×</button>${notePanel(t)}</li>`;
+        ${starBtn(t)}${noteBtn(t)}<button class="del" title="刪除">×</button>${notePanel(t)}</li>`;
     }).join('') : `<li class="empty">這天還沒有安排，從上方新增吧</li>`;
   }
 
@@ -981,12 +1036,12 @@
       const dn = isReqDone(r, must);
       const [st, tag] = reqStatus(r, must, dn);
       const meta = reqMeta(r, must);
-      return `<li class="item ${dn ? 'done' : ''} ${st}" data-id="${r.id}">
+      return `<li class="item ${dn ? 'done' : ''} ${st} ${r.star ? 'starred' : ''}" data-id="${r.id}">
         <input type="checkbox" class="chk" ${dn ? 'checked' : ''} title="完成">
         ${meta && meta.length <= 12 ? `<span class="meta">${meta}</span>` : ''}
         ${itemBody(r, meta && meta.length > 12 ? meta : '')}
         ${tag ? `<span class="tag">${tag}</span>` : ''}
-        ${noteBtn(r)}<button class="del" title="刪除">×</button>${notePanel(r)}</li>`;
+        ${starBtn(r)}${noteBtn(r)}<button class="del" title="刪除">×</button>${notePanel(r)}</li>`;
     }).join('') : `<li class="empty">還沒有${pName(must)}必辦事項</li>`;
   }
   function renderOpts() {
@@ -1033,6 +1088,15 @@
     }).join('');
   }
   const openDrawer = on => { $('#drawer').classList.toggle('open', on); $('#scrim').classList.toggle('open', on); };
+  // 加入重要事項（星號）
+  const STAR_ON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/></svg>', STAR_OFF = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/></svg>';
+  const starBtn = x => `<button class="stbtn ${x.star ? 'on' : ''}" title="${x.star ? '已加入重要注意事項（點擊取消）' : '加入重要注意事項'}">${x.star ? STAR_ON : STAR_OFF}</button>`;
+  function starClick(e, x, rerender) {
+    if (!e.target.closest('.stbtn')) return false;
+    x.star = !x.star; x.u = now(); save(); rerender();
+    toast(x.star ? '⭐ 已加入重要注意事項' : '已從重要注意事項移除', x.text, 2500);
+    return true;
+  }
   // 備註（逐條）
   const NOTE_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>';
   const ICON_COPY = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>';
@@ -1249,6 +1313,7 @@
   $('#taskList').addEventListener('click', e => {
     const li = e.target.closest('.item'); if (!li) return;
     const t = state.tasks.find(x => x.id === li.dataset.id); if (!t) return;
+    if (starClick(e, t, renderDay)) return;
     if (noteClick(e, t, renderDay)) return;
     if (e.target.classList.contains('chk')) { t.done = e.target.checked; t.u = now(); save(); renderAll(); }
     if (e.target.classList.contains('del')) { state.deleted[t.id] = now(); state.tasks = state.tasks.filter(x => x !== t); save(); renderAll(); }
@@ -1343,6 +1408,7 @@
   $('#mustList').addEventListener('click', e => {
     const li = e.target.closest('.item'); if (!li) return;
     const r = state.required[must].find(x => x.id === li.dataset.id); if (!r) return;
+    if (starClick(e, r, renderMust)) return;
     if (noteClick(e, r, renderMust)) return;
     if (e.target.classList.contains('chk')) { state.reqDone[reqKey(r, must)] = e.target.checked ? now() : -now(); save(); renderAll(); }
     if (e.target.classList.contains('del')) { state.deleted[r.id] = now(); state.required[must] = state.required[must].filter(x => x !== r); save(); renderAll(); }
@@ -1417,8 +1483,148 @@
   setupSuggest($('#taskText'), $('#taskTime'), () => true);
   setupSuggest($('#mustText'), $('#mustTime'), () => must === 'daily' || (must === 'weekly' && wdSel.length > 0) || must === 'monthly' || must === 'irregular');
 
+  // ================= 面板切換 =================
+  const PANELS = ['#sheet', '#impSheet', '#coSheet'];
+  function showPanel(id) {
+    const open = $(id).classList.contains('hidden');
+    PANELS.forEach(x => $(x).classList.add('hidden'));
+    if (open) $(id).classList.remove('hidden');
+    return open;
+  }
+  document.querySelectorAll('[data-close-panel]').forEach(b => b.onclick = () => b.closest('.sheet').classList.add('hidden'));
+  $('#coBtn').onclick = () => showPanel('#coSheet');
+  $('#impBtn').onclick = () => { if (showPanel('#impSheet')) { impNewCat = false; impEdit = null; impRename = false; renderImp(); } };
+
+  // ================= 重要注意事項 =================
+  let impCat = 'star', impNewCat = false, impEdit = null, impRename = false;
+  const ICO = { copy: ICON_COPY, edit: ICON_EDIT };
+  function starredList() {
+    const out = state.tasks.filter(t => t.star).sort((a, b) => (a.date + (a.time || '99:99')).localeCompare(b.date + (b.time || '99:99')))
+      .map(t => ({ kind: 'task', x: t, label: `${md(parseD(t.date))}${t.time ? ' ' + t.time : ''}`, done: t.done }));
+    ALLP.forEach(([k, n]) => state.required[k].filter(r => r.star).forEach(r => out.push({ kind: 'req', p: k, x: r, label: `${n}必做`, done: isReqDone(r, k) })));
+    return out;
+  }
+  function renderImp() {
+    const cats = state.imp.cats, items = state.imp.items;
+    if (impCat !== 'star' && !cats.some(c => c.id === impCat)) impCat = 'star';
+    const sl = starredList();
+    $('#impCats').innerHTML = `<button class="ccat ${impCat === 'star' ? 'on' : ''}" data-cat="star">⭐ 標記的行程<span class="n">${sl.length}</span></button>` +
+      cats.map(c => `<button class="ccat ${impCat === c.id ? 'on' : ''}" data-cat="${c.id}">${esc(c.name)}<span class="n">${items.filter(i => i.cat === c.id).length}</span></button>`).join('') +
+      (impNewCat ? `<input class="ccat-in" id="newCatIn" placeholder="分類名稱" maxlength="20">` : `<button class="ccat add" data-cat="new">＋ 新增分類</button>`);
+    let h = '';
+    if (impCat === 'star') {
+      h = `<div class="cat-head"><b>標記的行程</b></div>` + (sl.length
+        ? `<div class="pad">${sl.map((s, i) => `<div class="prow link ${s.done ? 'done' : ''}" data-go="${s.kind}" data-id="${s.x.id}" data-p="${s.p || ''}">
+            <span class="pd">${s.label}</span><span class="pt">${esc(s.x.text)}</span>
+            <span class="acts"><button class="ni" data-unstar title="取消標記" style="color:#e8a317">${STAR_ON}</button></span></div>`).join('')}</div>
+           <div class="desc" style="margin-top:8px">點一下可跳到該事項。</div>`
+        : `<div class="imp-empty">還沒有標記的行程。<br>在行程或必做事項右側點 ☆，就會出現在這裡。</div>`);
+    } else {
+      const c = cats.find(c => c.id === impCat), list = items.filter(i => i.cat === c.id);
+      h = `<div class="cat-head">${impRename
+          ? `<input class="field" id="catNameIn" value="${esc(c.name)}" maxlength="20"><button class="nb primary" data-ca="rename-save">儲存</button>`
+          : `<b>${esc(c.name)}</b><button class="nb" data-ca="rename">重新命名</button><button class="nb danger" data-ca="del">刪除分類</button>`}</div>`;
+      h += list.length ? `<div class="pad">${list.map((it, i) => impEdit === it.id
+          ? `<div class="prow" data-iid="${it.id}"><span class="pn">${i + 1}</span><input class="field pin2" value="${esc(it.t)}"><button class="nb primary" data-ia="save">儲存</button><button class="nb" data-ia="cancel">取消</button></div>`
+          : `<div class="prow" data-iid="${it.id}"><span class="pn">${i + 1}</span><span class="pt" title="雙擊編輯">${esc(it.t)}</span>
+              <span class="acts"><button class="ni" data-ia="copy" title="複製">${ICO.copy}</button><button class="ni" data-ia="edit" title="編輯">${ICO.edit}</button><button class="ni danger" data-ia="del" title="刪除">×</button></span></div>`).join('')}</div>`
+        : `<div class="imp-empty">這個分類還沒有內容，從下方逐條新增。</div>`;
+      h += `<div class="nadd" style="margin-top:8px"><input class="field" id="impNew" placeholder="新增一條注意事項，按 Enter 加入" autocomplete="off"><button class="nb primary" data-ia="add">新增</button></div>`;
+      if (list.length > 1) h += `<div class="note-actions"><button class="nb" data-ia="copyall">全部複製</button></div>`;
+    }
+    $('#impBody').innerHTML = h;
+    if (impNewCat && $('#newCatIn')) { $('#newCatIn').focus({ preventScroll: true }); $('#impCats').scrollLeft = $('#impCats').scrollWidth; }
+  }
+  function addCat(name) {
+    name = name.trim(); if (!name) { impNewCat = false; return renderImp(); }
+    const c = { id: uid(), name, u: now() };
+    state.imp.cats.push(c); impCat = c.id; impNewCat = false; save(); renderImp(); focusIn('#impNew');
+  }
+  function goTo(kind, id, p) {
+    $('#impSheet').classList.add('hidden');
+    if (kind === 'task') {
+      const t = state.tasks.find(x => x.id === id); if (!t) return;
+      $('#mainTabs [data-tab=plan]').click();
+      selDate = t.date; view = parseD(t.date); view.setDate(1); state.calOpen = true;
+      renderCal(); renderDay();
+    } else {
+      $('#mainTabs [data-tab=must]').click(); must = p; renderMust();
+    }
+    setTimeout(() => { const li = document.querySelector(`.item[data-id="${id}"]`); if (li) { li.scrollIntoView({ block: 'center', behavior: 'smooth' }); li.animate([{ background: 'var(--accent-soft)' }, { background: 'var(--card)' }], { duration: 1400 }); } }, 50);
+  }
+  $('#impCats').addEventListener('click', e => {
+    const b = e.target.closest('[data-cat]'); if (!b) return;
+    if (b.dataset.cat === 'new') { impNewCat = true; renderImp(); return; }
+    impCat = b.dataset.cat; impEdit = null; impRename = false; renderImp();
+  });
+  $('#impCats').addEventListener('keydown', e => {
+    if (e.target.id !== 'newCatIn') return;
+    if (e.key === 'Enter') addCat(e.target.value);
+    if (e.key === 'Escape') { impNewCat = false; renderImp(); }
+  });
+  $('#impCats').addEventListener('focusout', e => { if (e.target.id === 'newCatIn') setTimeout(() => { if (impNewCat) addCat(e.target.value); }, 100); });
+  $('#impBody').addEventListener('click', e => {
+    const t = e.target;
+    if (t.closest('[data-unstar]')) {
+      const row = t.closest('.prow'), x = row.dataset.go === 'task' ? state.tasks.find(v => v.id === row.dataset.id) : state.required[row.dataset.p].find(v => v.id === row.dataset.id);
+      if (x) { x.star = false; x.u = now(); save(); renderImp(); renderAll(); }
+      return;
+    }
+    const go = t.closest('[data-go]'); if (go) return goTo(go.dataset.go, go.dataset.id, go.dataset.p);
+    const ca = t.closest('[data-ca]');
+    if (ca) {
+      const c = state.imp.cats.find(c => c.id === impCat);
+      if (ca.dataset.ca === 'rename') { impRename = true; renderImp(); focusIn('#catNameIn'); }
+      if (ca.dataset.ca === 'rename-save') { const v = $('#catNameIn').value.trim(); if (v) { c.name = v; c.u = now(); save(); } impRename = false; renderImp(); }
+      if (ca.dataset.ca === 'del') {
+        if (ca.dataset.confirm !== '1') { ca.dataset.confirm = '1'; ca.classList.add('confirm'); ca.textContent = `確定刪除（含 ${state.imp.items.filter(i => i.cat === c.id).length} 條）？`; setTimeout(() => { if (ca.isConnected) renderImp(); }, 3500); return; }
+        state.imp.items.filter(i => i.cat === c.id).forEach(i => state.deleted[i.id] = now());
+        state.deleted[c.id] = now();
+        state.imp.items = state.imp.items.filter(i => i.cat !== c.id); state.imp.cats = state.imp.cats.filter(x => x !== c);
+        impCat = 'star'; save(); renderImp(); toast('已刪除分類', c.name, 2500);
+      }
+      return;
+    }
+    const ia = t.closest('[data-ia]'); if (!ia) return;
+    const a = ia.dataset.ia, row = ia.closest('.prow'), it = row ? state.imp.items.find(i => i.id === row.dataset.iid) : null;
+    const list = state.imp.items.filter(i => i.cat === impCat);
+    if (a === 'add') {
+      const v = $('#impNew').value.trim(); if (!v) return $('#impNew').focus();
+      state.imp.items.push({ id: uid(), cat: impCat, t: v, u: now() }); save(); renderImp(); focusIn('#impNew');
+    }
+    if (a === 'copy' && it) copyText(it.t).then(ok => toast(ok ? '📋 已複製' : '無法複製', ok ? it.t : '', 2000));
+    if (a === 'copyall') copyText(list.map((v, i) => `${i + 1}. ${v.t}`).join('\n')).then(ok => toast(ok ? `📋 已複製全部 ${list.length} 條` : '無法複製', '', 2000));
+    if (a === 'edit' && it) { impEdit = it.id; renderImp(); focusIn('#impBody .pin2'); }
+    if (a === 'cancel') { impEdit = null; renderImp(); }
+    if (a === 'save' && it) {
+      const v = row.querySelector('.pin2').value.trim();
+      if (v) { it.t = v; it.u = now(); } else { state.deleted[it.id] = now(); state.imp.items = state.imp.items.filter(i => i !== it); }
+      impEdit = null; save(); renderImp();
+    }
+    if (a === 'del' && it) {
+      if (ia.dataset.confirm !== '1') { ia.dataset.confirm = '1'; ia.classList.add('confirm'); ia.textContent = '刪除？'; setTimeout(() => { if (ia.isConnected) { ia.dataset.confirm = ''; ia.classList.remove('confirm'); ia.textContent = '×'; } }, 3000); return; }
+      state.deleted[it.id] = now(); state.imp.items = state.imp.items.filter(i => i !== it); save(); renderImp();
+    }
+  });
+  $('#impBody').addEventListener('dblclick', e => {
+    const pt = e.target.closest('.pt'), row = pt && pt.closest('.prow[data-iid]'); if (!row) return;
+    impEdit = row.dataset.iid; renderImp(); focusIn('#impBody .pin2');
+  });
+  $('#impBody').addEventListener('keydown', e => {
+    if (e.target.id === 'impNew' && e.key === 'Enter') { e.preventDefault(); $('#impBody [data-ia=add]').click(); }
+    if (e.target.classList.contains('pin2')) {
+      if (e.key === 'Enter') { e.preventDefault(); e.target.closest('.prow').querySelector('[data-ia=save]').click(); }
+      if (e.key === 'Escape') { impEdit = null; renderImp(); }
+    }
+    if (e.target.id === 'catNameIn') {
+      if (e.key === 'Enter') $('#impBody [data-ca=rename-save]').click();
+      if (e.key === 'Escape') { impRename = false; renderImp(); }
+    }
+  });
+
   // ================= 設定面板 =================
   function openSheet(tab = 'look') {
+    PANELS.forEach(x => $(x).classList.add('hidden'));
     $('#sheet').classList.remove('hidden');
     switchSheet(tab);
     draft = Object.assign({}, currentTheme());
@@ -1598,7 +1804,7 @@
     return { app: 'FloatingTodo', format: 1, exportedAt: now(),
       user: { id: state.user.id, name: state.user.name, created: state.user.created },
       data: { tasks: state.tasks, required: state.required, reqDone: state.reqDone, deleted: state.deleted,
-              theme: state.theme, themeU: state.themeU || 0, history: state.history } };
+              theme: state.theme, themeU: state.themeU || 0, history: state.history, imp: state.imp } };
   }
   $('#exportBtn').onclick = async () => {
     if (!state.user.name) { $('#userName').focus(); toast('請先輸入使用者名稱', '換電腦匯入時會用名稱和 ID 確認是不是同一個人', 5000); return; }
@@ -1658,7 +1864,9 @@
       if (!c) history.push(Object.assign({}, x));
       else { c.n = Math.max(c.n, x.n); if (x.last > c.last) { c.last = x.last; if (x.time) c.time = x.time; } }
     });
-    return { result: { tasks, required, reqDone, deleted, theme, themeU, history }, st };
+    const iL = local.imp || { cats: [], items: [] }, iI = inc.imp || { cats: [], items: [] };
+    const imp = { cats: mergeList(iL.cats || [], iI.cats), items: mergeList(iL.items || [], iI.items) };
+    return { result: { tasks, required, reqDone, deleted, theme, themeU, history, imp }, st };
   }
 
   function handleImport(text) {
