@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>桌面代辦</title>
+<title>上班便利小工具</title>
 <style>
   :root{
     --bg:#f7f5f0; --card:#ffffff; --bar:#2a2d33; --bar-ink:#f3f1ec;
@@ -36,6 +36,20 @@
     -webkit-app-region:drag;user-select:none;flex-shrink:0}
   .titlebar button{-webkit-app-region:no-drag}
   .titlebar .title{font-weight:600;font-size:13px;letter-spacing:.5px;margin-left:2px}
+  /* 標題列分頁：代辦／客服文本 */
+  .mtabs{display:flex;gap:2px;margin-left:2px;padding:2px;border-radius:8px;background:color-mix(in srgb,var(--bar-ink) 10%,transparent);-webkit-app-region:no-drag}
+  .mtabs button{border:0;background:transparent;color:var(--bar-dim);font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap}
+  .mtabs button:hover{color:var(--bar-ink)}
+  .mtabs button.on{background:var(--bar-ink);color:var(--bar)}
+  .app.mode-csr .clock,.app.mode-csr #mainTabs,.app.mode-csr > main,.app.mode-csr #coBtn,.app.mode-csr #testBtn{display:none}
+  /* 重要注意事項：釘選與紅字（和客服文本共用） */
+  .prow.pinned{background:var(--accent-soft)}
+  .prow .pinb{font-size:10px;font-weight:700;color:#fff;background:var(--accent);border-radius:8px;padding:0 6px;margin-right:4px;vertical-align:1px}
+  .prow .red{color:#c8102e;font-weight:700}
+  .ni.on{color:var(--accent)}
+  .prow textarea.pin2{min-height:56px;resize:vertical;line-height:1.5}
+  .prow .edcol{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+  .prow .edcol .nb{align-self:flex-start;color:#c8102e}
   .spacer{flex:1}
   .icon{display:grid;place-items:center;width:30px;height:28px;border:0;background:transparent;border-radius:6px;color:var(--bar-dim)}
   .icon:hover{background:color-mix(in srgb,var(--bar-ink) 14%,transparent);color:var(--bar-ink)}
@@ -457,7 +471,7 @@
     <button id="pinBtn" class="icon pin" title="釘選：保持在所有視窗最上層">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3a1 1 0 0 1 .7 1.7L15.4 6l2.3 4.6 1.6-.6a1 1 0 0 1 1 1.6l-3.6 3.6-.1.1L21 19.6a1 1 0 0 1-1.4 1.4l-4.3-4.3-3.6 3.6a1 1 0 0 1-1.6-1l.6-1.7L6 15.4l-1.3 1.3A1 1 0 0 1 3 16c0-3 1.6-5.2 4.7-5.9L10.6 7a1 1 0 0 1 .3-.7l4.4-3A1 1 0 0 1 16 3z" transform="scale(-1,1) translate(-24,0)"/></svg>
     </button>
-    <div class="title">代辦事項</div>
+    <div class="mtabs" id="modeTabs"><button data-mode="todo" class="on" title="代辦事項">代辦</button><button data-mode="csr" title="客服回覆文本">客服文本</button></div>
     <div class="spacer"></div>
     <button id="coBtn" class="icon" title="關於公司的小事">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M16 9h2a2 2 0 0 1 2 2v10"/><path d="M9 7h3M9 11h3M9 15h3"/></svg>
@@ -544,6 +558,9 @@
     </section>
   </main>
 
+  <!-- 客服回覆文本（csr.js 會在這裡建立 Shadow DOM） -->
+  <div id="csrHost" class="hidden"></div>
+
   <!-- 側邊滑出：其他週期 -->
   <div class="scrim" id="scrim"></div>
   <aside class="drawer" id="drawer">
@@ -628,7 +645,7 @@
 
         <div class="lab">① 舊電腦：匯出繼承檔</div>
         <div class="card">
-          <div class="desc">把所有行程、必做事項、勾選紀錄和配色存成一個檔案，複製到新電腦（隨身碟、雲端硬碟、Email 都可以）。</div>
+          <div class="desc">把所有行程、必做事項、勾選紀錄、重要注意事項、客服回覆文本和配色存成一個檔案，複製到新電腦（隨身碟、雲端硬碟、Email 都可以）。</div>
           <button class="btn primary" id="exportBtn">匯出繼承檔</button>
         </div>
 
@@ -1947,6 +1964,10 @@
   const ICO = { copy: ICON_COPY, edit: ICON_EDIT };
   const OKSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   if (!Array.isArray(state.imp.pads)) state.imp.pads = [];
+  // 紅字標記 [[文字]]（客服文本的注意事項也用這個格式）
+  const RED = /\[\[([\s\S]+?)\]\]/g;
+  const plainRed = t => String(t).replace(RED, '$1');
+  const redHtml = t => esc(t).replace(/\[\[([\s\S]+?)\]\]/g, '<span class="red">$1</span>');
   function renderImp() {
     const { cats, items, pads } = state.imp;
     if (!cats.some(c => c.id === impCat)) impCat = cats.length ? cats[0].id : null;
@@ -1965,16 +1986,17 @@
         <textarea class="ed-body" id="padBody" placeholder="在這裡自由書寫…">${esc(pd.body)}</textarea>
         <div class="ed-meta" id="padMeta">最後修改 ${dt(pd.u)}・自動儲存</div>`;
     } else {
-      const c = cats.find(c => c.id === impCat), list = items.filter(i => i.cat === c.id), plist = pads.filter(i => i.cat === c.id).sort((a, b) => b.u - a.u);
+      const c = cats.find(c => c.id === impCat), list0 = items.filter(i => i.cat === c.id), plist = pads.filter(i => i.cat === c.id).sort((a, b) => b.u - a.u);
+      const list = list0.filter(i => i.pin).concat(list0.filter(i => !i.pin));
       h = `<div class="cat-head">${impRename
           ? `<input class="field" id="catNameIn" value="${esc(c.name)}" maxlength="20"><button class="btn okb" data-ca="rename-save" style="padding:5px 10px">${OKSVG}</button>`
           : `<b>${esc(c.name)}</b><button class="nb" data-ca="rename">重新命名</button><button class="nb danger" data-ca="del">刪除分類</button>`}</div>
         <div class="subtabs"><button class="${impView === 'list' ? 'on' : ''}" data-view="list">📋 條列事項（${list.length}）</button><button class="${impView === 'pad' ? 'on' : ''}" data-view="pad">📝 記事本（${plist.length}）</button></div>`;
       if (impView === 'list') {
         h += list.length ? `<div class="pad">${list.map((it, i) => impEdit === it.id
-            ? `<div class="prow" data-iid="${it.id}"><span class="pn">${i + 1}</span><input class="field pin2" value="${esc(it.t)}"><button class="okbtn" data-ia="save" title="編輯完成">${OKSVG}</button><button class="ni" data-ia="cancel" title="取消">×</button></div>`
-            : `<div class="prow" data-iid="${it.id}"><span class="pn">${i + 1}</span><span class="pt" title="雙擊編輯">${esc(it.t)}</span>
-                <span class="acts"><button class="ni" data-ia="copy" title="複製">${ICO.copy}</button><button class="ni" data-ia="edit" title="編輯">${ICO.edit}</button><button class="ni danger" data-ia="del" title="刪除">×</button></span></div>`).join('')}</div>`
+            ? `<div class="prow" data-iid="${it.id}"><span class="pn">${i + 1}</span><span class="edcol"><textarea class="field pin2" rows="${Math.min(6, it.t.split('\n').length + 1)}">${esc(it.t)}</textarea><button class="nb" data-ia="red" title="先選取文字再按，標成重點紅字">標紅字</button></span><button class="okbtn" data-ia="save" title="編輯完成（Enter；Shift+Enter 換行）">${OKSVG}</button><button class="ni" data-ia="cancel" title="取消">×</button></div>`
+            : `<div class="prow${it.pin ? ' pinned' : ''}" data-iid="${it.id}"><span class="pn">${i + 1}</span><span class="pt" title="雙擊編輯">${it.pin ? '<span class="pinb">釘選</span>' : ''}${redHtml(it.t)}</span>
+                <span class="acts"><button class="ni" data-ia="copy" title="複製">${ICO.copy}</button><button class="ni${it.pin ? ' on' : ''}" data-ia="pin" title="${it.pin ? '取消釘選' : '釘選到最上方'}">📌</button><button class="ni" data-ia="edit" title="編輯">${ICO.edit}</button><button class="ni danger" data-ia="del" title="刪除">×</button></span></div>`).join('')}</div>`
           : `<div class="imp-empty">這個分類還沒有條列事項，從下方逐條新增。</div>`;
         h += `<div class="nadd" style="margin-top:8px"><input class="field" id="impNew" placeholder="新增一條注意事項，按 Enter 加入" autocomplete="off"><button class="nb primary" data-ia="add">新增</button></div>`;
         if (list.length > 1) h += `<div class="note-actions"><button class="nb" data-ia="copyall">全部複製</button></div>`;
@@ -1986,6 +2008,7 @@
       }
     }
     $('#impBody').innerHTML = h;
+    if (window.CSR) CSR.notesChanged();
     if (impNewCat && $('#newCatIn')) { $('#newCatIn').focus({ preventScroll: true }); $('#impCats').scrollLeft = $('#impCats').scrollWidth; }
   }
   function addCat(name) {
@@ -2062,8 +2085,14 @@
       const v = $('#impNew').value.trim(); if (!v) return $('#impNew').focus();
       state.imp.items.push({ id: uid(), cat: impCat, t: v, u: now() }); save(); renderImp(); focusIn('#impNew');
     }
-    if (a === 'copy' && it) copyText(it.t).then(ok => toast(ok ? '📋 已複製' : '無法複製', ok ? it.t : '', 2000));
-    if (a === 'copyall') copyText(list.map((v, i) => `${i + 1}. ${v.t}`).join('\n')).then(ok => toast(ok ? `📋 已複製全部 ${list.length} 條` : '無法複製', '', 2000));
+    if (a === 'copy' && it) copyText(plainRed(it.t)).then(ok => toast(ok ? '📋 已複製' : '無法複製', ok ? plainRed(it.t) : '', 2000));
+    if (a === 'pin' && it) { it.pin = !it.pin || undefined; it.u = now(); save(); renderImp(); }
+    if (a === 'red') {
+      const ta = row.querySelector('.pin2'), s0 = ta.selectionStart, e0 = ta.selectionEnd;
+      if (s0 === e0) { toast('請先選取要標成紅字的文字', '', 2500); ta.focus(); return; }
+      ta.value = ta.value.slice(0, s0) + '[[' + ta.value.slice(s0, e0) + ']]' + ta.value.slice(e0); ta.focus(); ta.setSelectionRange(s0, e0 + 4);
+    }
+    if (a === 'copyall') copyText(list.filter(i => i.pin).concat(list.filter(i => !i.pin)).map((v, i) => `${i + 1}. ${plainRed(v.t)}`).join('\n')).then(ok => toast(ok ? `📋 已複製全部 ${list.length} 條` : '無法複製', '', 2000));
     if (a === 'edit' && it) { impEdit = it.id; renderImp(); focusIn('#impBody .pin2'); }
     if (a === 'cancel') { impEdit = null; renderImp(); }
     if (a === 'save' && it) {
@@ -2084,7 +2113,7 @@
   $('#impBody').addEventListener('keydown', e => {
     if (e.target.id === 'impNew' && e.key === 'Enter') { e.preventDefault(); $('#impBody [data-ia=add]').click(); }
     if (e.target.classList.contains('pin2')) {
-      if (e.key === 'Enter') { e.preventDefault(); e.target.closest('.prow').querySelector('[data-ia=save]').click(); }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.target.closest('.prow').querySelector('[data-ia=save]').click(); }
       if (e.key === 'Escape') { impEdit = null; renderImp(); }
     }
     if (e.target.id === 'catNameIn') {
@@ -2276,13 +2305,14 @@
     return { app: 'FloatingTodo', format: 1, exportedAt: now(),
       user: { id: state.user.id, name: state.user.name, created: state.user.created },
       data: { tasks: state.tasks, required: state.required, reqDone: state.reqDone, deleted: state.deleted,
-              theme: state.theme, themeU: state.themeU || 0, history: state.history, imp: state.imp, doneLog: state.doneLog } };
+              theme: state.theme, themeU: state.themeU || 0, history: state.history, imp: state.imp, doneLog: state.doneLog,
+              csr: window.CSR ? CSR.exportData() : undefined } };
   }
   $('#exportBtn').onclick = async () => {
     if (!state.user.name) { $('#userName').focus(); toast('請先輸入使用者名稱', '換電腦匯入時會用名稱和 ID 確認是不是同一個人', 5000); return; }
     const text = JSON.stringify(exportPayload(), null, 1);
     const d = new Date();
-    const name = `桌面代辦繼承檔_${state.user.name}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+    const name = `上班便利小工具繼承檔_${state.user.name}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
     if (desktop) {
       const p = await desktop.saveFile(name, text);
       if (p) toast('✅ 已匯出繼承檔', p, 6000);
@@ -2345,11 +2375,12 @@
   function handleImport(text) {
     let f;
     try { f = JSON.parse(text); } catch (e) { toast('無法讀取檔案', '這不是有效的繼承檔', 5000); return; }
-    if (!f || f.app !== 'FloatingTodo' || !f.user || !f.data) { toast('檔案格式不符', '請選擇「桌面代辦」匯出的繼承檔', 5000); return; }
+    if (!f || f.app !== 'FloatingTodo' || !f.user || !f.data) { toast('檔案格式不符', '請選擇「上班便利小工具」（或舊版桌面代辦）匯出的繼承檔', 5000); return; }
     const d = f.data;
     d.tasks = (d.tasks || []).map(normNotes); d.required = Object.assign(blankReq(), d.required || {});
     ALLP.forEach(([k]) => d.required[k] = (d.required[k] || []).map(normNotes));
     const { result, st } = mergeData(state, d);
+    const csrR = window.CSR ? CSR.mergePreview(d.csr) : null;
     const same = f.user.id === state.user.id;
     const localEmpty = countItems(state) === 0;
     const prev = [...state.imports].reverse().find(x => x.from === f.user.id);
@@ -2370,12 +2401,14 @@
         <div><b>${st.added}</b>新增</div><div><b>${st.updated}</b>更新</div>
         <div><b>${st.removed}</b>移除</div><div><b>${countItems(result)}</b>合併後總數</div>
       </div>
+      ${csrR && d.csr ? `<div class="desc">客服文本：新增 ${csrR.added} 段（同名分類會合併，重複的文本不會再加）</div>` : ''}
       ${st.added + st.updated + st.removed === 0 ? '<div class="desc">兩邊的事項已經一致，合併只會同步勾選紀錄。</div>' : ''}
       <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="doMerge" ${same || localEmpty ? '' : 'disabled'}>合併匯入</button></div>`);
     const chk = $('#sameChk');
     if (chk) chk.onchange = () => $('#doMerge').disabled = !chk.checked;
     $('#doMerge').onclick = () => {
       Object.assign(state, result);
+      if (csrR && d.csr) CSR.apply(csrR);
       if (!same) {                                   // 確認為同一人 → 統一身分，保留較早建立的
         const keepInc = localEmpty || (f.user.created || 0) <= (state.user.created || Infinity);
         const name = state.user.name || f.user.name;
@@ -2388,6 +2421,7 @@
       applyVars(document.documentElement, currentTheme()); draft = currentTheme(); selectTarget(target);
       renderAll(); renderData(); checkReminders();
       toast('✅ 繼承完成', `新增 ${st.added} 筆、更新 ${st.updated} 筆，共 ${countItems(state)} 筆事項`, 6000);
+      if (window.CSR) CSR.notesChanged();
     };
   }
 
@@ -2412,7 +2446,7 @@
   };
 
   // ================= 回信備份 =================
-  window.__backupPayload = () => { if (padOpen) savePad(false); return JSON.stringify(exportPayload(), null, 1); };   // 關閉程式時由桌面端讀取
+  window.__backupPayload = () => { if (padOpen) savePad(false); if (window.CSR) CSR.flush(); return JSON.stringify(exportPayload(), null, 1); };   // 關閉程式時由桌面端讀取
   const fmtErr = m => m || '未知錯誤';
   async function renderMail() {
     if (!desktop) {
@@ -2509,6 +2543,28 @@
     desktop.onUpdate(s => { up = s; renderUpdate(); });
   } else $('#verText').textContent = '網頁預覽版';
 
+  // ================= 代辦／客服文本 切換 =================
+  let appVersion = '';
+  if (desktop) desktop.version().then(v => appVersion = v);
+  window.FT = {
+    imp: () => state.imp,
+    saveImp: () => { save(); if (!$('#impSheet').classList.contains('hidden') && !impEdit && !padOpen) renderImp(); },
+    markDeleted: id => { state.deleted[id] = now(); },
+    toast: (msg, ms = 2600) => toast(msg, '', ms),
+    copyText,
+    version: () => appVersion ? 'v' + appVersion : '網頁預覽版'
+  };
+  function setMode(m) {
+    state.mode = m === 'csr' ? 'csr' : 'todo'; save();
+    $('#app').classList.toggle('mode-csr', state.mode === 'csr');
+    $('#csrHost').classList.toggle('hidden', state.mode !== 'csr');
+    document.querySelectorAll('#modeTabs button').forEach(b => b.classList.toggle('on', b.dataset.mode === state.mode));
+    $('#coSheet').classList.add('hidden');
+    if (state.mode === 'csr' && window.CSR) CSR.shown();
+  }
+  $('#modeTabs').onclick = e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.mode); };
+  window.addEventListener('DOMContentLoaded', () => setMode(state.mode));
+
   // ================= 啟動 =================
   if (desktop && state.pinned) desktop.setPin(true);
   tick(); renderAll(); renderUpdate(); checkReminders();
@@ -2527,5 +2583,6 @@
   }, 30000);
 })();
 </script>
+<script src="csr.js"></script>
 </body>
 </html>

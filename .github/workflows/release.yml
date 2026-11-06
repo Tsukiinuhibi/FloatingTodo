@@ -27,6 +27,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           V=$(node -p "require('./package.json').version")
-          gh release view "v$V" >/dev/null 2>&1 || gh release create "v$V" --title "v$V" --notes "桌面代辦 v$V" --target "$GITHUB_SHA"
+          gh release view "v$V" >/dev/null 2>&1 || gh release create "v$V" --title "v$V" --notes "上班便利小工具 v$V" --target "$GITHUB_SHA"
           gh release upload "v$V" "dist/FloatingTodo-Setup-$V.exe" "dist/FloatingTodo-Setup-$V.exe.blockmap" --clobber
           gh release upload "v$V" dist/latest.yml --clobber

@@ -17,5 +17,10 @@ contextBridge.exposeInMainWorld('desktop', {
   mailTest: () => ipcRenderer.invoke('mail-test'),
   openBackupDir: () => ipcRenderer.invoke('open-backup-dir'),
   openExternal: url => ipcRenderer.invoke('open-external', url),
-  onUpdate: cb => ipcRenderer.on('update-status', (_e, s) => cb(s))
+  onUpdate: cb => ipcRenderer.on('update-status', (_e, s) => cb(s)),
+  // 客服回覆文本
+  csrLoad: () => ipcRenderer.sendSync('csr-load'),
+  csrSave: json => ipcRenderer.sendSync('csr-save', json),
+  csrKeepBroken: () => ipcRenderer.sendSync('csr-keep-broken'),
+  csrSaveTxt: (name, text) => ipcRenderer.invoke('csr-save-txt', { name, text })
 });
