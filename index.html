@@ -161,6 +161,59 @@
   .opts select{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:4px 2px;font-size:13px;color:var(--ink)}
   .opts .note{width:100%;font-size:11px;margin-top:2px}
 
+  /* 必做：分頁列＋右側箭頭 */
+  .seg-row{display:flex;gap:4px;margin-bottom:10px;align-items:stretch}
+  .seg-row .seg{flex:1;margin:0}
+  .more{position:relative;display:flex;align-items:center;gap:2px;border:0;background:var(--seg);border-radius:9px;padding:0 6px;color:var(--muted);font-size:12px;font-weight:600}
+  .more:hover{color:var(--ink)}
+  .more.on{background:var(--accent);color:#fff}
+  .more .n{position:absolute;top:-4px;right:-3px;font-size:10px;min-width:15px;line-height:15px;border-radius:8px;background:var(--accent);color:#fff;text-align:center;padding:0 3px}
+  .more.on .n{background:var(--ink);color:var(--card)}
+  .more .n:empty{display:none}
+  /* 側邊滑出選單 */
+  .scrim{position:absolute;inset:36px 0 0 0;background:rgba(0,0,0,.28);z-index:6;opacity:0;pointer-events:none;transition:opacity .25s}
+  .scrim.open{opacity:1;pointer-events:auto}
+  .drawer{position:absolute;top:36px;bottom:0;right:0;width:236px;background:var(--card);z-index:7;box-shadow:-8px 0 24px rgba(0,0,0,.18);
+    transform:translateX(105%);transition:transform .25s ease;display:flex;flex-direction:column}
+  .drawer.open{transform:none}
+  .drawer-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .drawer-head .x{border:0;background:transparent;font-size:20px;color:var(--muted);width:30px;height:28px;border-radius:6px}
+  .drawer-head .x:hover{background:var(--soft)}
+  .dlist{padding:8px;display:flex;flex-direction:column;gap:6px}
+  .dopt{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px}
+  .dopt:hover{background:var(--soft)}
+  .dopt.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .dopt .di{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:var(--accent-soft);color:var(--accent);flex-shrink:0}
+  .dopt b{display:block;font-size:14px}
+  .dopt small{display:block;font-size:11px;color:var(--muted);margin-top:1px;line-height:1.4}
+  .dopt .cnt{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap}
+  .opts input[type=number]{width:52px;border:1px solid var(--line);background:var(--card);border-radius:7px;padding:4px 6px;font-size:13px}
+  .opts input[type=date]{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:3px 4px;font-size:13px}
+
+  /* 備註 */
+  .item{flex-wrap:wrap}
+  .item .body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .item .sub-meta{align-self:flex-start;font-weight:500}
+  .note-pv{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+  .note-pv:hover{color:var(--accent)}
+  .nbtn{border:0;background:transparent;color:var(--muted);width:22px;height:22px;border-radius:5px;flex-shrink:0;display:grid;place-items:center;opacity:0}
+  .item:hover .nbtn,.nbtn.has,.nbtn.open{opacity:.75}
+  .nbtn.has{color:var(--accent)}
+  .nbtn:hover{background:var(--soft);opacity:1}
+  .note-panel{flex-basis:100%;margin:4px 0 0 26px;background:var(--soft);border-radius:8px;padding:8px}
+  .note-full{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;user-select:text;max-height:160px;overflow-y:auto}
+  .note-edit{width:100%;min-height:70px;resize:vertical;font-size:13px;line-height:1.5}
+  .note-actions{display:flex;gap:5px;justify-content:flex-end;margin-top:6px}
+  .nb{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 10px;font-size:12px}
+  .nb:hover{border-color:var(--accent);color:var(--accent)}
+  .nb.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .nb.danger{color:var(--warn)}
+  .nb.danger.confirm{background:var(--warn);border-color:var(--warn);color:#fff}
+  .note-tg{width:34px;padding:0 !important;display:grid;place-items:center;background:var(--card) !important;color:var(--muted) !important;border:1px solid var(--line) !important}
+  .note-tg.on{color:var(--accent) !important;border-color:var(--accent) !important}
+  .add-note{margin:-4px 0 10px}
+  .add-note textarea{width:100%;min-height:54px;resize:vertical;font-size:13px}
+
   /* 設定面板 */
   .sheet{position:absolute;inset:36px 0 0 0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
   .sheet-head{display:flex;align-items:center;background:var(--card);border-bottom:1px solid var(--line);flex-shrink:0}
@@ -210,6 +263,12 @@
   .dropper{display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 4px;font-size:12px}
   .dropper:hover{border-color:var(--accent);color:var(--accent)}
 
+  .w{width:100%;margin-bottom:6px}
+  .check-row{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer;line-height:1.45}
+  .check-row .chk{margin-top:1px}
+  .grid2{display:grid;grid-template-columns:1fr 80px;gap:6px}
+  .linkbtn{border:0;background:none;color:var(--accent);padding:0;text-decoration:underline;font-size:12px}
+  .msg-ok{color:var(--ok)} .msg-err{color:var(--warn)}
   .kv{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0}
   .kv span:first-child{color:var(--muted)}
   .mono{font-family:Consolas,"Cascadia Mono",monospace;font-size:12px}
@@ -289,13 +348,22 @@
       <form class="add" id="addTask">
         <input type="time" id="taskTime" title="時間（可留空＝全天）">
         <input type="text" id="taskText" placeholder="要做什麼事？" autocomplete="off">
+        <button type="button" class="note-tg" id="taskNoteTg" title="加上備註"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></button>
         <button type="submit">新增</button>
       </form>
+      <div class="add-note hidden" id="taskNoteWrap"><textarea class="field" id="taskNote" placeholder="備註（可留空）"></textarea></div>
       <ul class="list" id="taskList"></ul>
     </section>
 
     <section id="tab-must" class="hidden">
-      <div class="seg" id="seg"></div>
+      <div class="seg-row">
+        <div class="seg" id="seg"></div>
+        <button class="more" id="moreBtn" title="其他週期：不定期、半年">
+          <span id="moreLbl"></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <span class="n" id="moreN"></span>
+        </button>
+      </div>
       <div class="card period">
         <div class="row"><span class="lbl" id="periodLabel"></span><span class="cnt" id="periodCount"></span></div>
         <div class="pbar"><i id="periodBar"></i></div>
@@ -305,18 +373,28 @@
       <form class="add" id="addMust">
         <input type="time" id="mustTime">
         <input type="text" id="mustText" placeholder="新增必辦事項" autocomplete="off">
+        <button type="button" class="note-tg" id="mustNoteTg" title="加上備註"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></button>
         <button type="submit">新增</button>
       </form>
+      <div class="add-note hidden" id="mustNoteWrap"><textarea class="field" id="mustNote" placeholder="備註（可留空）"></textarea></div>
       <ul class="list" id="mustList"></ul>
     </section>
   </main>
+
+  <!-- 側邊滑出：其他週期 -->
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head"><b>其他週期</b><button class="x" id="drawerClose" title="收起">›</button></div>
+    <div class="dlist" id="dlist"></div>
+  </aside>
 
   <!-- 設定 -->
   <div class="sheet hidden" id="sheet">
     <div class="sheet-head">
       <nav class="tabs" id="sheetTabs">
         <button data-s="look" class="active">配色</button>
-        <button data-s="data">繼承資料</button>
+        <button data-s="data">繼承</button>
+        <button data-s="mail">回信</button>
         <button data-s="about">更新</button>
       </nav>
       <button class="x" id="sheetClose" title="關閉設定">×</button>
@@ -399,6 +477,37 @@
         </div>
       </section>
 
+      <!-- 回信備份 -->
+      <section id="s-mail" class="hidden">
+        <div class="card">
+          <label class="check-row"><input type="checkbox" class="chk" id="mailOn"><span><b>關閉程式時寄出備份信</b></span></label>
+          <div class="desc" style="margin-bottom:0">每次關閉程式，都會把「可匯入的繼承檔」寄到下面的信箱。萬一程式或電腦資料遺失、重灌，從信中下載附件，到「繼承 → 選擇繼承檔匯入」就能還原。</div>
+        </div>
+        <div class="lab">收件信箱（備份寄到這裡）</div>
+        <input class="field w" id="mailTo" type="email" placeholder="例如 me@gmail.com">
+        <div class="lab">寄件信箱</div>
+        <select class="field w" id="mailProv">
+          <option value="gmail">Gmail</option>
+          <option value="custom">其他（自訂 SMTP 伺服器）</option>
+        </select>
+        <div id="mailCustom" class="hidden">
+          <div class="grid2"><input class="field" id="mailHost" placeholder="SMTP 伺服器，例如 smtp.xxx.com"><input class="field" id="mailPort" type="number" placeholder="埠號"></div>
+          <label class="check-row" style="margin:6px 0"><input type="checkbox" class="chk" id="mailSecure"><span>使用 SSL（埠號 465 通常要勾選）</span></label>
+        </div>
+        <input class="field w" id="mailUser" type="email" placeholder="寄件帳號，例如 me@gmail.com">
+        <input class="field w" id="mailPass" type="password" placeholder="應用程式密碼" autocomplete="new-password">
+        <div class="desc" id="gmailHelp">Gmail 必須使用「應用程式密碼」（16 個英文字母），不是平常的登入密碼。需要先開啟兩步驟驗證，再到 Google 帳戶建立。<button class="linkbtn" id="appPwLink">開啟應用程式密碼設定頁</button></div>
+        <div class="card">
+          <label class="check-row"><input type="checkbox" class="chk" id="localBak"><span>關閉時也在本機存一份備份（文件 › 桌面代辦備份，保留最近 20 份）</span></label>
+          <button class="linkbtn" id="openBakDir" style="margin:6px 0 0 26px">開啟備份資料夾</button>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn ghost" id="mailTest">寄一封測試信</button>
+          <button class="btn primary" id="mailSave">儲存設定</button>
+        </div>
+        <div class="desc" id="mailStatus" style="margin-top:10px"></div>
+      </section>
+
       <!-- 更新 -->
       <section id="s-about" class="hidden">
         <div class="card">
@@ -428,6 +537,9 @@
   const WD = ['日','一','二','三','四','五','六'];
   const WD_ORDER = [1,2,3,4,5,6,0];
   const PERIODS = [['daily','每日'],['weekly','每週'],['monthly','每月'],['quarterly','每季'],['yearly','每年']];
+  const SPECIAL = [['irregular','不定期'],['halfyear','半年']];
+  const ALLP = [...PERIODS, ...SPECIAL];
+  const pName = k => ALLP.find(p => p[0] === k)[1];
   const HOUR = 3600e3;
   const $ = s => document.querySelector(s);
   const now = () => Date.now();
@@ -435,7 +547,7 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   // ================= 資料 =================
-  const blankReq = () => ({daily:[],weekly:[],monthly:[],quarterly:[],yearly:[]});
+  const blankReq = () => ({daily:[],weekly:[],monthly:[],quarterly:[],yearly:[],irregular:[],halfyear:[]});
   const blank = () => ({ v: 2, user: null, tasks: [], required: blankReq(), reqDone: {}, deleted: {},
                          notified: {}, pinned: false, calOpen: true, theme: null, imports: [], history: null });
   let state = blank();
@@ -446,11 +558,11 @@
   // 舊版資料升級
   if (!state.user) state.user = { id: uid() + uid(), name: '', created: now() };
   state.tasks.forEach(t => { if (t.u == null) t.u = 0; });
-  PERIODS.forEach(([k]) => state.required[k].forEach(r => { if (r.u == null) r.u = 0; }));
+  ALLP.forEach(([k]) => state.required[k].forEach(r => { if (r.u == null) r.u = 0; }));
   state.deleted = state.deleted || {}; state.imports = state.imports || [];
   if (!Array.isArray(state.history)) {               // 由現有事項建立輸入紀錄
     state.history = [];
-    const all = [...state.tasks]; PERIODS.forEach(([k]) => all.push(...state.required[k]));
+    const all = [...state.tasks]; ALLP.forEach(([k]) => all.push(...state.required[k]));
     all.forEach(x => remember(x.text, x.time, x.u || 0));
   }
   function remember(text, time, at = Date.now()) {
@@ -492,6 +604,8 @@
       return [`本週 ${md(a)} – ${md(b)}`, '每週一自動重置｜可指定週幾（選多天則每天各自勾選），設定時間會在當天到期前 1 小時提醒']; }
     if (p === 'monthly') return [`${y} 年 ${m+1} 月`, '每月 1 日自動重置｜可設定日期範圍，設定時間則在最後一天到期前 1 小時提醒'];
     if (p === 'quarterly') { const q = Math.floor(m/3); return [`${y} 年第 ${q+1} 季（${q*3+1}–${q*3+3} 月）`, '每季第一天自動重置勾選']; }
+    if (p === 'irregular') return ['不定期・自訂週期', '每筆可設定「每 N 天／週／個月」和開始日期，每一期開始時自動重置｜設定時間則在每期最後一天到期前 1 小時提醒'];
+    if (p === 'halfyear') return ['半年・每 6 個月一期', '每筆可指定起始月份，例如 3 月起：3–8 月、9 月–隔年 2 月各為一期，每期開始時自動重置'];
     return [`${y} 年`, '每年 1 月 1 日自動重置勾選'];
   }
 
@@ -510,7 +624,36 @@
     if (a > b) [a, b] = [b, a];
     return [a, b];
   }
-  const reqKey = (r, p) => (p === 'weekly' && hasDays(r)) ? `${r.id}|${fmt(weeklyOcc(r))}` : `${r.id}|${periodKey(p)}`;
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const addMonths = (d, n) => { const y = d.getFullYear(), m = d.getMonth() + n; return new Date(y, m, Math.min(d.getDate(), new Date(y, m + 1, 0).getDate())); };
+  const dayDiff = (a, b) => Math.round((b - a) / 864e5);
+  const UNIT = { day: '天', week: '週', month: '個月' };
+  // 不定期：每 N 天/週/月 為一期，從開始日起算
+  function irrCycle(r, n = new Date()) {
+    const st = parseD(r.start || fmt(n)), t = parseD(fmt(n)), N = Math.max(1, +r.every || 1);
+    if (t < st) return { before: true, start: st, end: st };
+    if (r.unit === 'month') {
+      let k = (t.getFullYear() - st.getFullYear()) * 12 + t.getMonth() - st.getMonth();
+      if (t < addMonths(st, k)) k--;
+      const i = Math.floor(k / N);
+      return { start: addMonths(st, i * N), end: addDays(addMonths(st, (i + 1) * N), -1) };
+    }
+    const len = N * (r.unit === 'week' ? 7 : 1);
+    const s = addDays(st, Math.floor(dayDiff(st, t) / len) * len);
+    return { start: s, end: addDays(s, len - 1) };
+  }
+  // 半年：從起始月份起每 6 個月一期
+  function halfCycle(r, n = new Date()) {
+    const k = (n.getMonth() - ((+r.startMonth || 1) - 1) + 12) % 12, off = k < 6 ? k : k - 6;
+    const s = new Date(n.getFullYear(), n.getMonth() - off, 1);
+    return { start: s, end: new Date(s.getFullYear(), s.getMonth() + 6, 0) };
+  }
+  function reqKey(r, p) {
+    if (p === 'weekly' && hasDays(r)) return `${r.id}|${fmt(weeklyOcc(r))}`;
+    if (p === 'irregular') { const c = irrCycle(r); return `${r.id}|${c.before ? 'pre' : fmt(c.start)}`; }
+    if (p === 'halfyear') return `${r.id}|H${fmt(halfCycle(r).start)}`;
+    return `${r.id}|${periodKey(p)}`;
+  }
   const isReqDone = (r, p) => (state.reqDone[reqKey(r, p)] || 0) > 0;   // 正數＝勾選時間，負數＝取消時間
 
   // ================= 介面狀態 =================
@@ -519,6 +662,8 @@
   let view = new Date(); view.setDate(1);
   let must = 'daily';
   let wdSel = [], mFrom = '', mTo = '';
+  let iEvery = '1', iUnit = 'day', iStart = '', hMonth = String(new Date().getMonth() + 1);
+  let noteOpen = null, noteEdit = null;
 
   function tick() {
     const n = new Date();
@@ -545,6 +690,18 @@
       if (o > today) return ['later', `下次 ${md(parseD(o))}`];
       const s = status(false, today, r.time); return [s || 'today', tagText[s] || '今天'];
     }
+    if (p === 'irregular') {
+      const c = irrCycle(r);
+      if (c.before) return ['later', `${md(c.start)} 開始`];
+      const left = dayDiff(parseD(today), c.end);
+      if (left === 0) { const s = r.time ? status(false, today, r.time) : ''; return [s || 'today', tagText[s] || '今天截止']; }
+      return ['active', `剩 ${left + 1} 天`];
+    }
+    if (p === 'halfyear') {
+      const left = dayDiff(parseD(today), halfCycle(r).end);
+      if (left === 0) return ['today', '今天截止'];
+      return ['active', left < 31 ? `剩 ${left + 1} 天` : `至 ${md(halfCycle(r).end)}`];
+    }
     if (p === 'monthly') {
       const g = mRange(r); if (!g) return ['', ''];
       const d = new Date().getDate();
@@ -560,6 +717,13 @@
     if (p === 'daily') return r.time || '';
     if (p === 'weekly' && hasDays(r))
       return '週' + WD_ORDER.filter(d => r.days.includes(d)).map(d => WD[d]).join('、') + (r.time ? ` ${r.time}` : '');
+    if (p === 'irregular') {
+      const N = Math.max(1, +r.every || 1), c = irrCycle(r);
+      const every = N === 1 ? { day: '每天', week: '每週', month: '每月' }[r.unit || 'day'] : `每 ${N} ${UNIT[r.unit || 'day']}`;
+      const span = c.before ? `${md(c.start)} 起` : `${md(c.start)}–${md(c.end)}`;
+      return `${every}・${span}` + (r.time ? ` ${r.time}` : '');
+    }
+    if (p === 'halfyear') { const c = halfCycle(r); return `${r.startMonth} 月起・${c.start.getMonth()+1}–${c.end.getMonth()+1} 月`; }
     if (p === 'monthly' && (r.from || r.to || r.time)) {
       const g = mRange(r);
       return (r.from || r.to ? (g[0] === g[1] ? `${g[0]} 日` : `${g[0]}–${g[1]} 日`) : '月底') + (r.time ? ` ${r.time}` : '');
@@ -598,9 +762,9 @@
       return `<li class="item ${t.done ? 'done' : ''} ${st}" data-id="${t.id}">
         <input type="checkbox" class="chk" ${t.done ? 'checked' : ''} title="完成">
         <span class="time">${t.time || '全天'}</span>
-        <span class="text" title="雙擊可編輯">${esc(t.text)}</span>
+        ${itemBody(t)}
         ${st ? `<span class="tag">${tagText[st]}</span>` : ''}
-        <button class="del" title="刪除">×</button></li>`;
+        ${noteBtn(t)}<button class="del" title="刪除">×</button>${notePanel(t)}</li>`;
     }).join('') : `<li class="empty">這天還沒有安排，從上方新增吧</li>`;
   }
 
@@ -610,6 +774,11 @@
       const open = state.required[k].filter(r => isOpen(r, k)).length;
       return `<button data-p="${k}" class="${k === must ? 'active' : ''}">${n}<span class="n">${open || ''}</span></button>`;
     }).join('');
+    const sp = SPECIAL.find(p => p[0] === must);
+    $('#moreBtn').classList.toggle('on', !!sp);
+    $('#moreLbl').textContent = sp ? sp[1] : '';
+    $('#moreN').textContent = SPECIAL.reduce((n, [k]) => n + state.required[k].filter(r => isOpen(r, k)).length, 0) || '';
+    renderDrawer();
     const [lbl, hint] = periodInfo(must);
     const items = state.required[must];
     const done = items.filter(r => isReqDone(r, must)).length;
@@ -617,25 +786,27 @@
     $('#periodCount').textContent = items.length ? `完成 ${done}/${items.length}` : '';
     $('#periodBar').style.width = items.length ? `${done / items.length * 100}%` : '0';
     $('#periodHint').textContent = hint;
-    $('#mustTime').classList.toggle('hidden', !['daily','weekly','monthly'].includes(must));
-    $('#mustTime').title = must === 'monthly' ? '截止時間（範圍最後一天，可留空）' : must === 'weekly' ? '時間（需先選週幾，可留空）' : '時間（可留空）';
-    $('#mustText').placeholder = `新增${PERIODS.find(p => p[0] === must)[1]}必辦事項`;
+    $('#mustTime').classList.toggle('hidden', !['daily','weekly','monthly','irregular'].includes(must));
+    $('#mustTime').title = must === 'monthly' ? '截止時間（範圍最後一天，可留空）' : must === 'irregular' ? '截止時間（每期最後一天，可留空）' : must === 'weekly' ? '時間（需先選週幾，可留空）' : '時間（可留空）';
+    $('#mustText').placeholder = `新增${pName(must)}必辦事項`;
     renderOpts();
     let sorted = [...items];
     if (must === 'daily') sorted.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
     if (must === 'weekly') { const k = r => hasDays(r) ? fmt(weeklyOcc(r)) + (r.time || '99:99') : '9999'; sorted.sort((a, b) => k(a).localeCompare(k(b))); }
     if (must === 'monthly') { const k = r => { const g = (r.from || r.to) ? mRange(r) : null; return g ? g[0]*100 + g[1] : 9999; }; sorted.sort((a, b) => k(a) - k(b)); }
+    if (must === 'irregular') sorted.sort((a, b) => irrCycle(a).end - irrCycle(b).end);
+    if (must === 'halfyear') sorted.sort((a, b) => halfCycle(a).end - halfCycle(b).end);
     $('#mustList').innerHTML = sorted.length ? sorted.map(r => {
       const dn = isReqDone(r, must);
       const [st, tag] = reqStatus(r, must, dn);
       const meta = reqMeta(r, must);
       return `<li class="item ${dn ? 'done' : ''} ${st}" data-id="${r.id}">
         <input type="checkbox" class="chk" ${dn ? 'checked' : ''} title="完成">
-        ${meta ? `<span class="meta">${meta}</span>` : ''}
-        <span class="text" title="雙擊可編輯">${esc(r.text)}</span>
+        ${meta && meta.length <= 12 ? `<span class="meta">${meta}</span>` : ''}
+        ${itemBody(r, meta && meta.length > 12 ? meta : '')}
         ${tag ? `<span class="tag">${tag}</span>` : ''}
-        <button class="del" title="刪除">×</button></li>`;
-    }).join('') : `<li class="empty">還沒有${PERIODS.find(p => p[0] === must)[1]}必辦事項</li>`;
+        ${noteBtn(r)}<button class="del" title="刪除">×</button>${notePanel(r)}</li>`;
+    }).join('') : `<li class="empty">還沒有${pName(must)}必辦事項</li>`;
   }
   function renderOpts() {
     const el = $('#mustOpts');
@@ -645,13 +816,86 @@
     } else if (must === 'monthly') {
       const opt = v => '<option value="">—</option>' + Array.from({length: 31}, (_, i) => `<option value="${i+1}" ${String(i+1) === v ? 'selected' : ''}>${i+1}</option>`).join('');
       el.innerHTML = `<span>日期 從</span><select id="mFrom">${opt(mFrom)}</select><span>日 到</span><select id="mTo">${opt(mTo)}</select><span>日</span><span class="note">不選＝整個月；超過當月天數會自動算到月底</span>`;
+    } else if (must === 'irregular') {
+      el.innerHTML = `<span>每</span><input type="number" id="iEvery" min="1" max="999" value="${esc(iEvery)}">
+        <select id="iUnit">${Object.entries(UNIT).map(([k, n]) => `<option value="${k}" ${k === iUnit ? 'selected' : ''}>${n}</option>`).join('')}</select>
+        <span>一次，從</span><input type="date" id="iStart" value="${iStart || today}"><span>開始</span>
+        <span class="note">例如：每 10 天、每 2 週、每 3 個月；每一期勾選一次</span>`;
+    } else if (must === 'halfyear') {
+      el.innerHTML = `<span>起始月份</span><select id="hMonth">${Array.from({length: 12}, (_, i) => `<option value="${i+1}" ${String(i+1) === hMonth ? 'selected' : ''}>${i+1} 月</option>`).join('')}</select>
+        <span class="note">例如選 3 月：3–8 月、9 月–隔年 2 月各算一期</span>`;
     } else el.innerHTML = '';
     el.classList.toggle('hidden', !el.innerHTML);
+  }
+  // 側邊選單
+  const SP_DESC = {
+    irregular: ['<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>', '自訂間隔：每 N 天／週／個月'],
+    halfyear: ['<svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>', '每 6 個月一次，可指定起始月份'] };
+  function renderDrawer() {
+    $('#dlist').innerHTML = SPECIAL.map(([k, n]) => {
+      const all = state.required[k].length, open = state.required[k].filter(r => isOpen(r, k)).length;
+      return `<button class="dopt ${k === must ? 'on' : ''}" data-p="${k}"><span class="di">${SP_DESC[k][0]}</span>
+        <span><b>${n}</b><small>${SP_DESC[k][1]}</small></span><span class="cnt">${all ? `${open} 未完成` : ''}</span></button>`;
+    }).join('');
+  }
+  const openDrawer = on => { $('#drawer').classList.toggle('open', on); $('#scrim').classList.toggle('open', on); };
+  // 備註
+  const NOTE_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>';
+  function itemBody(x, sub = '') {
+    const pv = x.note ? `<div class="note-pv" data-nt title="點開備註">📝 ${esc(x.note.split('\n')[0])}</div>` : '';
+    return `<div class="body"><span class="text" title="雙擊可編輯">${esc(x.text)}</span>${sub ? `<span class="meta sub-meta">${sub}</span>` : ''}${pv}</div>`;
+  }
+  const noteBtn = x => `<button class="nbtn ${x.note ? 'has' : ''} ${noteOpen === x.id ? 'open' : ''}" title="${x.note ? '查看備註' : '新增備註'}">${NOTE_ICON}</button>`;
+  function notePanel(x) {
+    if (noteOpen !== x.id) return '';
+    if (noteEdit === x.id || !x.note)
+      return `<div class="note-panel"><textarea class="field note-edit" placeholder="輸入備註…（Ctrl+Enter 儲存）">${esc(x.note || '')}</textarea>
+        <div class="note-actions"><button class="nb" data-na="cancel">取消</button><button class="nb primary" data-na="save">儲存</button></div></div>`;
+    return `<div class="note-panel"><div class="note-full">${esc(x.note)}</div>
+      <div class="note-actions"><button class="nb" data-na="copy">複製</button><button class="nb" data-na="edit">編輯</button><button class="nb danger" data-na="del">刪除</button></div></div>`;
+  }
+  async function copyText(t) {
+    try { await navigator.clipboard.writeText(t); return true; }
+    catch (e) {
+      const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+    }
+  }
+  function focusNote() {
+    setTimeout(() => { const ta = document.querySelector('.note-edit'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }, 0);
+  }
+  // 回傳 true 代表這次點擊是備註相關操作
+  function noteClick(e, x, rerender) {
+    if (e.target.closest('.nbtn') || e.target.closest('[data-nt]')) {
+      if (noteOpen === x.id) { noteOpen = null; noteEdit = null; }
+      else { noteOpen = x.id; noteEdit = x.note ? null : x.id; }
+      rerender(); if (noteEdit) focusNote(); return true;
+    }
+    const b = e.target.closest('[data-na]'); if (!b) return false;
+    const a = b.dataset.na, li = b.closest('.item');
+    if (a === 'copy') copyText(x.note).then(ok => toast(ok ? '📋 已複製備註' : '無法複製', '', 2000));
+    if (a === 'edit') { noteEdit = x.id; rerender(); focusNote(); }
+    if (a === 'cancel') { noteEdit = null; if (!x.note) noteOpen = null; rerender(); }
+    if (a === 'save') {
+      const v = li.querySelector('.note-edit').value.replace(/\s+$/, '');
+      x.note = v; x.u = now(); noteEdit = null; if (!v) noteOpen = null; save(); rerender();
+    }
+    if (a === 'del') {
+      if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.classList.add('confirm'); b.textContent = '確定刪除？'; setTimeout(() => { if (b.isConnected) { b.dataset.confirm = ''; b.classList.remove('confirm'); b.textContent = '刪除'; } }, 3000); return true; }
+      x.note = ''; x.u = now(); noteOpen = null; noteEdit = null; save(); rerender(); toast('已刪除備註', '', 2000);
+    }
+    return true;
+  }
+  function noteKeys(e) {
+    if (!e.target.classList.contains('note-edit')) return;
+    const li = e.target.closest('.item');
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); li.querySelector('[data-na=save]').click(); }
+    if (e.key === 'Escape') li.querySelector('[data-na=cancel]').click();
   }
   function renderBadges() {
     $('#badgePlan').textContent = state.tasks.filter(t => t.date === today && !t.done).length || '';
     let openMust = 0;
-    PERIODS.forEach(([k]) => openMust += state.required[k].filter(r => isOpen(r, k)).length);
+    ALLP.forEach(([k]) => openMust += state.required[k].filter(r => isOpen(r, k)).length);
     $('#badgeMust').textContent = openMust || '';
   }
   function renderPin() {
@@ -690,6 +934,11 @@
       const g = mRange(r);
       const o = fmt(new Date(n.getFullYear(), n.getMonth(), g[1]));
       due.push({ key: `r|${r.id}|${o} ${r.time}`, at: dueOf(o, r.time), text: `［每月必做］${r.text}`, time: `${g[1]} 日 ${r.time}` });
+    });
+    state.required.irregular.forEach(r => {
+      if (!r.time || isReqDone(r, 'irregular')) return;
+      const c = irrCycle(r); if (c.before) return;
+      due.push({ key: `r|${r.id}|${fmt(c.end)} ${r.time}`, at: dueOf(fmt(c.end), r.time), text: `［不定期必做］${r.text}`, time: `${md(c.end)} ${r.time}` });
     });
     let changed = false;
     due.forEach(it => {
@@ -751,14 +1000,17 @@
   $('#addTask').onsubmit = e => {
     e.preventDefault();
     const text = $('#taskText').value.trim(); if (!text) return $('#taskText').focus();
-    state.tasks.push({ id: uid(), date: selDate, time: $('#taskTime').value, text, done: false, u: now() });
+    const note = $('#taskNote').value.replace(/\s+$/, '');
+    state.tasks.push({ id: uid(), date: selDate, time: $('#taskTime').value, text, note, done: false, u: now() });
     remember(text, $('#taskTime').value);
-    $('#taskText').value = ''; $('#taskTime').value = '';
+    $('#taskText').value = ''; $('#taskTime').value = ''; $('#taskNote').value = '';
+    $('#taskNoteWrap').classList.add('hidden'); $('#taskNoteTg').classList.remove('on');
     save(); renderAll(); checkReminders(); $('#taskText').focus();
   };
   $('#taskList').addEventListener('click', e => {
     const li = e.target.closest('.item'); if (!li) return;
     const t = state.tasks.find(x => x.id === li.dataset.id); if (!t) return;
+    if (noteClick(e, t, renderDay)) return;
     if (e.target.classList.contains('chk')) { t.done = e.target.checked; t.u = now(); save(); renderAll(); }
     if (e.target.classList.contains('del')) { state.deleted[t.id] = now(); state.tasks = state.tasks.filter(x => x !== t); save(); renderAll(); }
   });
@@ -768,7 +1020,7 @@
     startEdit(span, v => { t.text = v; t.u = now(); save(); });
   });
 
-  $('#seg').onclick = e => { const b = e.target.closest('button'); if (!b) return; must = b.dataset.p; renderMust(); };
+  $('#seg').onclick = e => { const b = e.target.closest('button'); if (!b) return; must = b.dataset.p; noteOpen = noteEdit = null; renderMust(); };
   $('#mustOpts').addEventListener('click', e => {
     const b = e.target.closest('.wd'); if (!b) return;
     const d = +b.dataset.wd;
@@ -778,12 +1030,31 @@
   $('#mustOpts').addEventListener('change', e => {
     if (e.target.id === 'mFrom') mFrom = e.target.value;
     if (e.target.id === 'mTo') mTo = e.target.value;
+    if (e.target.id === 'iUnit') iUnit = e.target.value;
+    if (e.target.id === 'iStart') iStart = e.target.value;
+    if (e.target.id === 'hMonth') hMonth = e.target.value;
   });
+  $('#mustOpts').addEventListener('input', e => { if (e.target.id === 'iEvery') iEvery = e.target.value; });
+  $('#taskList').addEventListener('keydown', noteKeys);
+  $('#mustList').addEventListener('keydown', noteKeys);
+  [['#taskNoteTg', '#taskNoteWrap', '#taskNote'], ['#mustNoteTg', '#mustNoteWrap', '#mustNote']].forEach(([tg, wrap, ta]) => {
+    $(tg).onclick = () => {
+      const on = $(wrap).classList.toggle('hidden') === false;
+      $(tg).classList.toggle('on', on); if (on) $(ta).focus();
+    };
+  });
+  $('#moreBtn').onclick = () => openDrawer(true);
+  $('#drawerClose').onclick = () => openDrawer(false);
+  $('#scrim').onclick = () => openDrawer(false);
+  $('#dlist').onclick = e => {
+    const b = e.target.closest('.dopt'); if (!b) return;
+    must = b.dataset.p; noteOpen = noteEdit = null; renderMust(); openDrawer(false);
+  };
   $('#addMust').onsubmit = e => {
     e.preventDefault();
     const text = $('#mustText').value.trim(); if (!text) return $('#mustText').focus();
     const tm = $('#mustTime').value;
-    const it = { id: uid(), text, time: '', u: now() };
+    const it = { id: uid(), text, time: '', note: $('#mustNote').value.replace(/\s+$/, ''), u: now() };
     if (must === 'daily') it.time = tm;
     if (must === 'weekly') {
       if (tm && !wdSel.length) { toast('請先選擇週幾', '每週事項要指定週幾才能設定時間', 4000); return; }
@@ -793,15 +1064,19 @@
       it.from = +mFrom || null; it.to = +mTo || null; it.time = tm;
       if (it.from && it.to && it.from > it.to) [it.from, it.to] = [it.to, it.from];
     }
+    if (must === 'irregular') { it.every = Math.max(1, parseInt(iEvery) || 1); it.unit = iUnit; it.start = iStart || today; it.time = tm; }
+    if (must === 'halfyear') it.startMonth = +hMonth;
     state.required[must].push(it);
     remember(text, it.time);
-    $('#mustText').value = ''; $('#mustTime').value = '';
-    wdSel = []; mFrom = ''; mTo = '';
+    $('#mustText').value = ''; $('#mustTime').value = ''; $('#mustNote').value = '';
+    $('#mustNoteWrap').classList.add('hidden'); $('#mustNoteTg').classList.remove('on');
+    wdSel = []; mFrom = ''; mTo = ''; iEvery = '1'; iStart = '';
     save(); renderAll(); checkReminders(); $('#mustText').focus();
   };
   $('#mustList').addEventListener('click', e => {
     const li = e.target.closest('.item'); if (!li) return;
     const r = state.required[must].find(x => x.id === li.dataset.id); if (!r) return;
+    if (noteClick(e, r, renderMust)) return;
     if (e.target.classList.contains('chk')) { state.reqDone[reqKey(r, must)] = e.target.checked ? now() : -now(); save(); renderAll(); }
     if (e.target.classList.contains('del')) { state.deleted[r.id] = now(); state.required[must] = state.required[must].filter(x => x !== r); save(); renderAll(); }
   });
@@ -871,7 +1146,7 @@
     form.addEventListener('submit', () => setTimeout(hide, 0));
   }
   setupSuggest($('#taskText'), $('#taskTime'), () => true);
-  setupSuggest($('#mustText'), $('#mustTime'), () => must === 'daily' || (must === 'weekly' && wdSel.length > 0) || must === 'monthly');
+  setupSuggest($('#mustText'), $('#mustTime'), () => must === 'daily' || (must === 'weekly' && wdSel.length > 0) || must === 'monthly' || must === 'irregular');
 
   // ================= 設定面板 =================
   function openSheet(tab = 'look') {
@@ -879,11 +1154,11 @@
     switchSheet(tab);
     draft = Object.assign({}, currentTheme());
     selectTarget(target);
-    renderData(); renderUpdate();
+    renderData(); renderUpdate(); renderMail();
   }
   function switchSheet(s) {
     document.querySelectorAll('#sheetTabs button').forEach(b => b.classList.toggle('active', b.dataset.s === s));
-    ['look','data','about'].forEach(k => $('#s-' + k).classList.toggle('hidden', k !== s));
+    ['look','data','mail','about'].forEach(k => $('#s-' + k).classList.toggle('hidden', k !== s));
     $('#sheetBody').scrollTop = 0;
   }
   $('#setBtn').onclick = () => $('#sheet').classList.contains('hidden') ? openSheet() : $('#sheet').classList.add('hidden');
@@ -1039,7 +1314,7 @@
 
   // ================= 繼承資料 =================
   const shortId = id => id.slice(0, 4).toUpperCase() + '-' + id.slice(4, 8).toUpperCase();
-  function countItems(d) { let n = d.tasks.length; PERIODS.forEach(([k]) => n += (d.required[k] || []).length); return n; }
+  function countItems(d) { let n = d.tasks.length; ALLP.forEach(([k]) => n += (d.required[k] || []).length); return n; }
   function renderData() {
     $('#userName').value = state.user.name || '';
     $('#userId').textContent = shortId(state.user.id);
@@ -1103,7 +1378,7 @@
     }
     const tasks = mergeList(local.tasks, inc.tasks);
     const required = blankReq();
-    PERIODS.forEach(([k]) => required[k] = mergeList(local.required[k] || [], (inc.required || {})[k]));
+    ALLP.forEach(([k]) => required[k] = mergeList(local.required[k] || [], (inc.required || {})[k]));
     const reqDone = Object.assign({}, local.reqDone);
     for (const k in inc.reqDone || {}) if (Math.abs(inc.reqDone[k]) > Math.abs(reqDone[k] || 0)) reqDone[k] = inc.reqDone[k];
     let theme = local.theme, themeU = local.themeU || 0;
@@ -1169,6 +1444,71 @@
   function closeModal() { $('#modal').classList.add('hidden'); }
   $('#modal').addEventListener('click', e => { if (e.target.id === 'modal' || e.target.hasAttribute('data-close')) closeModal(); });
 
+  // ================= 回信備份 =================
+  window.__backupPayload = () => JSON.stringify(exportPayload(), null, 1);   // 關閉程式時由桌面端讀取
+  const fmtErr = m => m || '未知錯誤';
+  async function renderMail() {
+    if (!desktop) {
+      $('#mailStatus').innerHTML = '<span class="msg-err">網頁預覽版無法寄信，安裝桌面版後即可使用。</span>';
+      ['#mailTest','#mailSave'].forEach(id => $(id).disabled = true);
+      return;
+    }
+    const c = await desktop.mailGet();
+    $('#mailOn').checked = !!c.enabled;
+    $('#mailTo').value = c.to || '';
+    $('#mailProv').value = c.provider || 'gmail';
+    $('#mailHost').value = c.host || ''; $('#mailPort').value = c.port || ''; $('#mailSecure').checked = c.secure !== false;
+    $('#mailUser').value = c.user || '';
+    $('#mailPass').value = '';
+    $('#mailPass').placeholder = c.hasPass ? '已儲存（要更換才需重新輸入）' : (c.provider === 'custom' ? '寄件密碼' : '應用程式密碼（16 碼）');
+    $('#localBak').checked = c.localBackup !== false;
+    mailProvUI();
+    const lines = [];
+    if (c.lastSent) lines.push(`<span class="msg-ok">✔ 上次成功寄出：${dt(c.lastSent)}</span>`);
+    if (c.lastError && (!c.lastSent || c.lastError.at > c.lastSent)) lines.push(`<span class="msg-err">✖ ${dt(c.lastError.at)} 寄送失敗：${esc(fmtErr(c.lastError.msg))}</span>`);
+    if (c.lastLocal) lines.push(`上次本機備份：${dt(c.lastLocal)}`);
+    $('#mailStatus').innerHTML = lines.join('<br>');
+  }
+  function mailProvUI() {
+    const custom = $('#mailProv').value === 'custom';
+    $('#mailCustom').classList.toggle('hidden', !custom);
+    $('#gmailHelp').classList.toggle('hidden', custom);
+  }
+  $('#mailProv').onchange = mailProvUI;
+  function mailForm() {
+    return { enabled: $('#mailOn').checked, to: $('#mailTo').value.trim(), provider: $('#mailProv').value,
+      host: $('#mailHost').value.trim(), port: +$('#mailPort').value || '', secure: $('#mailSecure').checked,
+      user: $('#mailUser').value.trim(), pass: $('#mailPass').value.replace(/\s/g, ''), localBackup: $('#localBak').checked };
+  }
+  const emailOk = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  async function saveMail(requireComplete) {
+    const f = mailForm(), c = await desktop.mailGet();
+    if (f.enabled || requireComplete) {
+      if (!emailOk(f.to)) { toast('請輸入正確的收件信箱', '', 4000); $('#mailTo').focus(); return false; }
+      if (!emailOk(f.user)) { toast('請輸入寄件帳號', '寄件帳號需是完整的 Email', 4000); $('#mailUser').focus(); return false; }
+      if (!f.pass && !c.hasPass) { toast('請輸入密碼', f.provider === 'gmail' ? 'Gmail 要用「應用程式密碼」' : '', 4000); $('#mailPass').focus(); return false; }
+      if (f.provider === 'custom' && (!f.host || !f.port)) { toast('請輸入 SMTP 伺服器和埠號', '', 4000); return false; }
+    }
+    await desktop.mailSet(f);
+    return true;
+  }
+  $('#mailSave').onclick = async () => { if (await saveMail(false)) { toast('✅ 已儲存回信設定', $('#mailOn').checked ? '之後每次關閉程式都會寄出備份' : '目前未開啟寄送', 3500); renderMail(); } };
+  $('#mailTest').onclick = async () => {
+    if (!(await saveMail(true))) return;
+    const b = $('#mailTest'); b.disabled = true; b.textContent = '寄送中…';
+    const r = await desktop.mailTest();
+    b.disabled = false; b.textContent = '寄一封測試信';
+    if (r.ok) toast('📧 測試信已寄出', `請到 ${$('#mailTo').value} 收信（可能在垃圾郵件）`, 6000);
+    else toast('寄送失敗', fmtErr(r.error), 8000);
+    renderMail();
+  };
+  $('#appPwLink').onclick = () => desktop ? desktop.openExternal('https://myaccount.google.com/apppasswords') : window.open('https://myaccount.google.com/apppasswords');
+  $('#openBakDir').onclick = () => desktop ? desktop.openBackupDir() : toast('預覽版無法開啟資料夾', '', 3000);
+  if (desktop) desktop.mailGet().then(c => {
+    if (c.lastError && (!c.lastSent || c.lastError.at > c.lastSent) && c.lastError.at > now() - 7 * 864e5)
+      toast('⚠ 上次關閉時備份信寄送失敗', `${fmtErr(c.lastError.msg)}（到 ⚙ → 回信 檢查設定）`, 15000);
+  });
+
   // ================= 更新 =================
   let up = { state: desktop ? 'idle' : 'preview' };
   function renderUpdate() {
@@ -1208,7 +1548,7 @@
   setInterval(tick, 1000);
   setInterval(() => {
     checkReminders();
-    if (!document.querySelector('[contenteditable=true]')) { renderDay(); renderMust(); renderBadges(); }
+    if (!document.querySelector('[contenteditable=true]') && !noteEdit) { renderDay(); renderMust(); renderBadges(); }
   }, 30000);
 })();
 </script>

@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, Notification, screen, dialog, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, screen, dialog, desktopCapturer, safeStorage, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 let win;
 let autoUpdater = null;
+let allowClose = false;
 
 // Windows 通知需要 AppUserModelId（需與 package.json build.appId 相同）
 app.setAppUserModelId(app.isPackaged ? 'com.desktop.floating-todo' : process.execPath);
@@ -26,6 +27,16 @@ function createWindow() {
   });
   win.loadFile('index.html');
   win.webContents.once('did-finish-load', setupUpdater);
+
+  // 關閉時：先隱藏視窗，做完本機備份與寄信再真正結束
+  win.on('close', async e => {
+    if (allowClose) return;
+    e.preventDefault();
+    win.hide();
+    try { await runBackup(); } catch (err) {}
+    allowClose = true;
+    win.close();
+  });
 }
 
 // ---------- 視窗 ----------
@@ -46,6 +57,121 @@ ipcMain.on('notify', (_e, { title, body }) => {
   n.show();
   if (!win.isFocused()) win.flashFrame(true);
 });
+
+// ---------- 回信備份 ----------
+const pad = n => String(n).padStart(2, '0');
+const stamp = (d = new Date(), sep = true) => sep
+  ? `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  : `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+const cfgPath = () => path.join(app.getPath('userData'), 'mail.json');
+const backupDir = () => path.join(app.getPath('documents'), '桌面代辦備份');
+function loadCfg() {
+  try { return JSON.parse(fs.readFileSync(cfgPath(), 'utf8')); }
+  catch (e) { return { enabled: false, provider: 'gmail', localBackup: true }; }
+}
+function saveCfg(c) { fs.writeFileSync(cfgPath(), JSON.stringify(c, null, 1)); }
+function encPass(p) {
+  if (safeStorage.isEncryptionAvailable()) return { enc: true, v: safeStorage.encryptString(p).toString('base64') };
+  return { enc: false, v: Buffer.from(p).toString('base64') };
+}
+function decPass(o) {
+  if (!o) return '';
+  const b = Buffer.from(o.v, 'base64');
+  return o.enc ? safeStorage.decryptString(b) : b.toString();
+}
+const safeName = s => String(s || '').replace(/[\\/:*?"<>|]/g, '_');
+
+ipcMain.handle('mail-get', () => {
+  const { pass, ...rest } = loadCfg();
+  return { ...rest, hasPass: !!pass, backupDir: backupDir() };
+});
+ipcMain.handle('mail-set', (_e, n) => {
+  const c = loadCfg();
+  const { pass, ...rest } = n;
+  Object.assign(c, rest);
+  if (pass) c.pass = encPass(pass);
+  saveCfg(c);
+  return true;
+});
+ipcMain.handle('mail-test', async () => {
+  const text = await getPayload();
+  if (!text) return { ok: false, error: '無法讀取資料' };
+  return sendBackupMail(text, true);
+});
+ipcMain.handle('open-backup-dir', () => { fs.mkdirSync(backupDir(), { recursive: true }); return shell.openPath(backupDir()); });
+ipcMain.handle('open-external', (_e, url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
+
+async function getPayload() {
+  if (!win || win.isDestroyed()) return null;
+  return Promise.race([
+    win.webContents.executeJavaScript('window.__backupPayload ? window.__backupPayload() : null'),
+    new Promise(r => setTimeout(() => r(null), 3000))
+  ]);
+}
+function writeLocalBackup(text) {
+  const dir = backupDir();
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, `桌面代辦備份_${stamp(new Date(), false)}.json`), text, 'utf8');
+  const files = fs.readdirSync(dir).filter(f => /^桌面代辦備份_\d{8}_\d{6}\.json$/.test(f)).sort();
+  files.slice(0, Math.max(0, files.length - 20)).forEach(f => { try { fs.unlinkSync(path.join(dir, f)); } catch (e) {} });
+}
+function friendlyError(err) {
+  const code = err && (err.code || err.responseCode);
+  if (code === 'EAUTH' || code === 535 || code === 534) return '帳號或密碼錯誤（Gmail 請使用應用程式密碼）';
+  if (['ECONNECTION', 'ETIMEDOUT', 'ESOCKET', 'ENOTFOUND', 'ECONNREFUSED', 'EDNS'].includes(code)) return '無法連線到郵件伺服器，請確認網路或伺服器設定';
+  return String(err && err.message || err).split('\n')[0].slice(0, 120);
+}
+async function sendBackupMail(text, isTest = false) {
+  const c = loadCfg();
+  if (!c.to || !c.user || !c.pass) return { ok: false, error: '回信設定不完整' };
+  let data = {};
+  try { data = JSON.parse(text); } catch (e) {}
+  const name = (data.user && data.user.name) || '';
+  const d = data.data || {};
+  const count = (d.tasks || []).length + Object.values(d.required || {}).reduce((n, a) => n + a.length, 0);
+  const server = c.provider === 'custom'
+    ? { host: c.host, port: +c.port || 465, secure: !!c.secure }
+    : { host: 'smtp.gmail.com', port: 465, secure: true };
+  try {
+    const nodemailer = require('nodemailer');
+    const t = nodemailer.createTransport({ ...server, auth: { user: c.user, pass: decPass(c.pass) },
+      connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000 });
+    await t.sendMail({
+      from: `"桌面代辦" <${c.user}>`,
+      to: c.to,
+      subject: `${isTest ? '[測試] ' : ''}[桌面代辦備份] ${name ? name + ' ' : ''}${stamp()}`,
+      text: [
+        `這是「桌面代辦」${isTest ? '的測試備份信' : '在關閉時自動寄出的備份'}。`,
+        '',
+        `使用者：${name || '未命名'}`,
+        `備份時間：${stamp()}`,
+        `事項數量：${count} 筆`,
+        '',
+        '【如何還原】',
+        '1. 下載這封信的附件（.json 檔）',
+        '2. 開啟桌面代辦 → 右上角 ⚙ 設定 → 繼承 → 選擇繼承檔匯入',
+        '3. 確認使用者後按「合併匯入」',
+      ].join('\n'),
+      attachments: [{ filename: `桌面代辦繼承檔_${safeName(name) || '備份'}_${stamp(new Date(), false)}.json`, content: text, contentType: 'application/json' }]
+    });
+    const n = loadCfg(); n.lastSent = Date.now(); saveCfg(n);
+    return { ok: true };
+  } catch (err) {
+    const msg = friendlyError(err);
+    const n = loadCfg(); n.lastError = { at: Date.now(), msg }; saveCfg(n);
+    return { ok: false, error: msg };
+  }
+}
+// 關閉或更新前執行：本機備份＋寄信（最多等 25 秒）
+async function runBackup() {
+  const text = await getPayload();
+  if (!text) return;
+  const c = loadCfg();
+  if (c.localBackup !== false) {
+    try { writeLocalBackup(text); const n = loadCfg(); n.lastLocal = Date.now(); saveCfg(n); } catch (e) {}
+  }
+  if (c.enabled) await Promise.race([sendBackupMail(text), new Promise(r => setTimeout(r, 25000))]);
+}
 
 // ---------- 繼承檔 ----------
 ipcMain.handle('save-file', async (_e, { name, text }) => {
@@ -128,7 +254,13 @@ ipcMain.on('update-check', () => {
   autoUpdater.checkForUpdates().catch(() => {});
 });
 ipcMain.on('update-download', () => autoUpdater && autoUpdater.downloadUpdate().catch(() => {}));
-ipcMain.on('update-install', () => autoUpdater && autoUpdater.quitAndInstall(false, true));
+ipcMain.on('update-install', async () => {
+  if (!autoUpdater) return;
+  if (win && !win.isDestroyed()) win.hide();
+  try { await runBackup(); } catch (e) {}
+  allowClose = true;
+  autoUpdater.quitAndInstall(false, true);
+});
 
 // ---------- 啟動 ----------
 if (!app.requestSingleInstanceLock()) {

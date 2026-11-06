@@ -12,5 +12,10 @@ contextBridge.exposeInMainWorld('desktop', {
   updateCheck: () => ipcRenderer.send('update-check'),
   updateDownload: () => ipcRenderer.send('update-download'),
   updateInstall: () => ipcRenderer.send('update-install'),
+  mailGet: () => ipcRenderer.invoke('mail-get'),
+  mailSet: cfg => ipcRenderer.invoke('mail-set', cfg),
+  mailTest: () => ipcRenderer.invoke('mail-test'),
+  openBackupDir: () => ipcRenderer.invoke('open-backup-dir'),
+  openExternal: url => ipcRenderer.invoke('open-external', url),
   onUpdate: cb => ipcRenderer.on('update-status', (_e, s) => cb(s))
 });
