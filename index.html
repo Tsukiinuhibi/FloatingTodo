@@ -823,6 +823,30 @@
     if (unit === 'month') { const m = (t.getFullYear() - a.getFullYear()) * 12 + t.getMonth() - a.getMonth(); return m % N === 0 && fmt(addMonths(a, m)) === d; }
     return dayDiff(a, t) % (N * (unit === 'week' ? 7 : 1)) === 0;
   }
+  // 某一天是否輪到這個必做事項（未來行程用）；沒有指定日子的事項在週期內每天都顯示
+  function occursOnAll(r, k, d) {
+    if (k === 'irregular' || k === 'halfyear') return occursOn(r, k, d);
+    const t = parseD(d);
+    if (k === 'weekly') return hasDays(r) ? r.days.includes(t.getDay()) : true;
+    if (k === 'monthly') { if (!r.from && !r.to) return true; const g = mRange(r, t); return t.getDate() >= g[0] && t.getDate() <= g[1]; }
+    return true;                                   // 每日、每季、每年
+  }
+  // 有指定日子的才在日曆上標點（避免每天都有點）
+  function datedOn(r, k, d) {
+    if (k === 'irregular' || k === 'halfyear') return occursOn(r, k, d);
+    if (k === 'weekly' && hasDays(r)) return r.days.includes(parseD(d).getDay());
+    if (k === 'monthly' && (r.from || r.to)) return occursOnAll(r, k, d);
+    return false;
+  }
+  // 那一天所屬的週期是否已完成
+  function doneOn(r, k, d) {
+    let key;
+    if (k === 'daily' || (k === 'weekly' && hasDays(r))) key = d;
+    else if (k === 'irregular') key = isOnce(r) ? (r.once === 'dates' ? d : 'once') : d;
+    else if (k === 'halfyear') key = 'H' + d;
+    else key = periodKey(k, parseD(d));
+    return (state.reqDone[`${r.id}|${key}`] || 0) > 0;
+  }
   function reqKey(r, p) {
     if (p === 'irregular' && isOnce(r)) return `${r.id}|${onceOcc(r).key}`;
     if (p === 'weekly' && hasDays(r)) return `${r.id}|${fmt(weeklyOcc(r))}`;
@@ -1008,7 +1032,7 @@
       const hi = state.holShow !== false ? dayInfo(k) : { off: false, name: '' };
       const cls = ['day', d.getMonth() !== m && 'other', k === today && 'today', k === selDate && 'sel', hi.name && hi.off && 'off', hi.work && 'work'].filter(Boolean).join(' ');
       const tip = hi.name ? ` title="${esc(hi.name)}"` : '';
-      const sp = SPECIAL.some(([sk]) => state.required[sk].some(r => occursOn(r, sk, k)));
+      const sp = ALLP.some(([sk]) => state.required[sk].some(r => datedOn(r, sk, k)));
       h += `<button class="${cls}" data-date="${k}"${tip}><span>${d.getDate()}</span>${hi.name ? `<span class="hl">${esc(shortName(hi.name))}</span>` : ''}${c ? `<i class="dot ${c.open ? '' : 'done'}"></i>` : ''}${sp ? '<i class="dot sp" title="有不定期／半年事項"></i>' : ''}</button>`;
     }
     $('#calGrid').innerHTML = h;
@@ -1071,16 +1095,19 @@
       ALLP.forEach(([k, n]) => state.required[k].forEach(r => { if (isOpen(r, k)) rows.push([k, n, r]); }));
       // 今天剛好輪到、但還沒開始計算的不定期／半年也列出
       SPECIAL.forEach(([k, n]) => state.required[k].forEach(r => { if (!rows.some(x => x[2] === r) && occursOn(r, k, today) && !isReqDone(r, k)) rows.push([k, n, r]); }));
+    } else if (selDate > today) {
+      // 未來日期：依各自週期提前顯示（該期已完成的就不顯示）
+      ALLP.forEach(([k, n]) => state.required[k].forEach(r => { if (occursOnAll(r, k, selDate) && !doneOn(r, k, selDate)) rows.push([k, n, r]); }));
     } else {
       SPECIAL.forEach(([k, n]) => state.required[k].forEach(r => { if (occursOn(r, k, selDate)) rows.push([k, n, r]); }));
     }
     $('#mustSecHead').classList.toggle('hidden', !rows.length);
-    $('#mustSecHead h2').textContent = isToday ? '📌 今天的必做事項' : '📌 這天的不定期／半年事項';
+    $('#mustSecHead h2').textContent = isToday ? '📌 今天的必做事項' : selDate > today ? '📌 這天的必做事項（預定）' : '📌 這天的不定期／半年事項';
     $('#mustSecCnt').textContent = rows.length ? (isToday ? `${rows.length} 項未完成` : `${rows.length} 項`) : '';
     if (!isToday) {
       const future = selDate > today;
       $('#planMust').innerHTML = rows.map(([k, n, r]) => `<li class="item" data-id="${r.id}" data-p="${k}">
-        <span class="sp-ico">📅</span><span class="meta">${n}</span>${itemBody(r, reqMeta(r, k))}
+        <span class="sp-ico">📅</span><span class="meta">${n}</span>${itemBody(r, k === 'irregular' || k === 'halfyear' || reqMeta(r, k).length > 12 ? reqMeta(r, k) : (r.time || ''))}
         <span class="tag" style="background:var(--soft);color:var(--muted)">${future ? '預定' : '當天'}</span></li>`).join('');
       return;
     }
