@@ -1,7 +1,7 @@
 {
   "name": "floating-todo",
   "productName": "FloatingTodo",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Windows 桌面代辦事項懸浮視窗",
   "author": "open900418",
   "main": "main.js",
