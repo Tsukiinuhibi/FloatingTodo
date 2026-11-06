@@ -284,7 +284,11 @@
   .nempty{font-size:12px;color:var(--muted);padding:2px 4px}
   .add-note .nlist{margin-bottom:2px}
   .add-note .nrow{background:var(--card);border:1px solid var(--line)}
-  .note-tg{width:34px;padding:0 !important;display:grid;place-items:center;background:var(--card) !important;color:var(--muted) !important;border:1px solid var(--line) !important}
+  .okbtn{border:0;background:var(--ok);color:#fff;border-radius:7px;min-width:30px;height:28px;display:grid;place-items:center;flex-shrink:0;padding:0;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  .okbtn:hover{background:color-mix(in srgb,var(--ok) 85%,#000)}
+  .nrow .okbtn{min-width:26px;height:24px}
+  .note-tg .cnt{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;border-radius:8px;background:var(--ok);color:#fff;font-size:10px;line-height:15px;text-align:center;padding:0 3px}
+  .note-tg{position:relative;width:34px;padding:0 !important;display:grid;place-items:center;background:var(--card) !important;color:var(--muted) !important;border:1px solid var(--line) !important}
   .note-tg.on{color:var(--accent) !important;border-color:var(--accent) !important}
   .add-note{margin:-4px 0 10px}
   .add-note textarea{width:100%;min-height:54px;resize:vertical;font-size:13px}
@@ -435,7 +439,7 @@
         <button type="submit">新增</button>
       </form>
       <div class="add-note hidden" id="taskNoteWrap"><ol class="nlist" id="taskNoteList"></ol>
-        <div class="nadd" style="margin-top:4px"><input class="field" id="taskNote" placeholder="輸入一條備註，按 Enter 加入下一條" autocomplete="off"><button type="button" class="nb" id="taskNoteAdd">加入</button></div></div>
+        <div class="nadd" style="margin-top:4px"><input class="field" id="taskNote" placeholder="輸入一條備註，按 Enter 加入下一條" autocomplete="off"><button type="button" class="nb" id="taskNoteAdd">加入</button><button type="button" class="okbtn" id="taskNoteDone" title="備註編輯完成"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div></div>
       <ul class="list" id="taskList"></ul>
     </section>
 
@@ -461,7 +465,7 @@
         <button type="submit">新增</button>
       </form>
       <div class="add-note hidden" id="mustNoteWrap"><ol class="nlist" id="mustNoteList"></ol>
-        <div class="nadd" style="margin-top:4px"><input class="field" id="mustNote" placeholder="輸入一條備註，按 Enter 加入下一條" autocomplete="off"><button type="button" class="nb" id="mustNoteAdd">加入</button></div></div>
+        <div class="nadd" style="margin-top:4px"><input class="field" id="mustNote" placeholder="輸入一條備註，按 Enter 加入下一條" autocomplete="off"><button type="button" class="nb" id="mustNoteAdd">加入</button><button type="button" class="okbtn" id="mustNoteDone" title="備註編輯完成"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div></div>
       <ul class="list" id="mustList"></ul>
     </section>
   </main>
@@ -1105,6 +1109,7 @@
   const NOTE_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>';
   const ICON_COPY = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>';
   const ICON_EDIT = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+  const ICON_OK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   const notesOf = x => Array.isArray(x.notes) ? x.notes : [];
   function itemBody(x, sub = '') {
     const ns = notesOf(x);
@@ -1118,12 +1123,12 @@
     const ns = notesOf(x);
     const rows = ns.map((n, i) => noteEdit === n.id
       ? `<li class="nrow" data-nid="${n.id}"><span class="no">${i + 1}</span><input class="field nedit" value="${esc(n.t)}">
-          <button class="nb primary" data-na="save">儲存</button><button class="nb" data-na="cancel">取消</button></li>`
+          <button class="okbtn" data-na="save" title="編輯完成">${ICON_OK}</button><button class="ni" data-na="cancel" title="取消">×</button></li>`
       : `<li class="nrow" data-nid="${n.id}"><span class="no">${i + 1}</span><span class="nt" title="雙擊編輯">${esc(n.t)}</span>
           <span class="nacts"><button class="ni" data-na="copy" title="複製這條">${ICON_COPY}</button><button class="ni" data-na="edit" title="編輯">${ICON_EDIT}</button><button class="ni danger" data-na="del" title="刪除這條">×</button></span></li>`).join('');
     return `<div class="note-panel">
       ${ns.length ? `<ol class="nlist">${rows}</ol>` : '<div class="nempty">還沒有備註，從下方逐條新增</div>'}
-      <div class="nadd"><input class="field nnew" placeholder="新增一條備註，按 Enter 加入" autocomplete="off"><button class="nb primary" data-na="add">新增</button></div>
+      <div class="nadd"><input class="field nnew" placeholder="新增一條備註，按 Enter 加入" autocomplete="off"><button class="nb" data-na="add">新增</button><button class="okbtn" data-na="done" title="編輯完成">${ICON_OK}</button></div>
       ${ns.length > 1 ? '<div class="note-actions"><button class="nb" data-na="copyall">全部複製</button></div>' : ''}
     </div>`;
   }
@@ -1149,6 +1154,14 @@
     const ns = x.notes = notesOf(x);
     const n = row ? ns.find(v => v.id === row.dataset.nid) : null;
     const touch = () => { x.u = now(); save(); };
+    if (a === 'done') {                     // 編輯完成：把輸入框裡還沒加入的內容加入，並收合
+      const v = panel.querySelector('.nnew').value.trim();
+      const ed = panel.querySelector('.nedit');
+      if (ed) { const en = ns.find(o => o.id === ed.closest('.nrow').dataset.nid); const ev = ed.value.trim(); if (en) { if (ev) en.t = ev; else x.notes = ns.filter(o => o !== en); } }
+      if (v) x.notes.push({ id: uid(), t: v });
+      if (v || ed) touch();
+      noteOpen = null; noteEdit = null; rerender(); return true;
+    }
     if (a === 'add') {
       const inp = panel.querySelector('.nnew'), v = inp.value.trim();
       if (!v) { inp.focus(); return true; }
@@ -1190,7 +1203,15 @@
   }
   // 新增事項時的待加入備註
   const pend = { task: [], must: [] };
+  function pendBadge(k) {
+    const tg = $(`#${k}NoteTg`), n = pend[k].filter(t => t.trim()).length;
+    let c = tg.querySelector('.cnt');
+    if (!n) { if (c) c.remove(); tg.title = '加上備註'; return; }
+    if (!c) { c = document.createElement('span'); c.className = 'cnt'; tg.appendChild(c); }
+    c.textContent = n; tg.title = `已輸入 ${n} 條備註（點擊查看）`;
+  }
   function renderPend(k) {
+    setTimeout(() => pendBadge(k), 0);
     $(`#${k}NoteList`).innerHTML = pend[k].map((t, i) => `<li class="nrow"><span class="no">${i + 1}</span>
       <input class="field nedit" data-i="${i}" value="${esc(t)}"><button type="button" class="ni danger" data-pi="${i}" title="移除">×</button></li>`).join('');
   }
@@ -1366,6 +1387,11 @@
     tg.onclick = () => { const on = wrap.classList.toggle('hidden') === false; tg.classList.toggle('on', on); if (on) inp.focus(); };
     const addOne = () => { const v = inp.value.trim(); if (!v) return; pend[k].push(v); inp.value = ''; renderPend(k); inp.focus(); };
     $(`#${k}NoteAdd`).onclick = addOne;
+    $(`#${k}NoteDone`).onclick = () => {                 // 編輯完成：收合備註區，保留已輸入的條目
+      const v = inp.value.trim(); if (v) { pend[k].push(v); inp.value = ''; renderPend(k); }
+      wrap.classList.add('hidden'); tg.classList.remove('on'); pendBadge(k);
+      $(`#${k}Text`).focus();
+    };
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addOne(); } });
     list.addEventListener('input', e => { if (e.target.dataset.i != null) pend[k][+e.target.dataset.i] = e.target.value; });
     list.addEventListener('click', e => { const b = e.target.closest('[data-pi]'); if (b) { pend[k].splice(+b.dataset.pi, 1); renderPend(k); } });
