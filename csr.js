@@ -162,6 +162,68 @@ button:disabled,.btn:disabled,.btn.primary:disabled,.btn:disabled:hover{backgrou
 .dlg .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .dlg label{font-weight:700}
 
+/* ===== 精簡版面（v1.1.0）：較小的字、間距與邊框 ===== */
+:host{font-size:calc(14px * var(--z));line-height:1.5}
+.btn{border-width:1px;padding:3px 10px;min-height:30px;border-radius:7px}
+.btn.small{padding:1px 8px;min-height:26px;font-size:calc(13px * var(--z))}
+.side{border-right-width:1px}
+.side h2{font-size:calc(12px * var(--z));padding:8px 12px 2px}
+.cats{padding:2px 6px;gap:1px}
+.cat{border-width:1px;padding:4px 8px;border-radius:7px}
+.cat .n{font-size:calc(11.5px * var(--z));padding:0 6px}
+.cat .fx{font-size:calc(10.5px * var(--z));padding:0 5px}
+.side .add{margin:6px}
+.head{padding:6px 12px;gap:6px;border-bottom-width:1px}
+.head h1{font-size:calc(16px * var(--z));font-weight:800}
+.search{border-width:1px;min-height:28px;padding:2px 8px;width:170px}
+.groups{padding:5px 12px;gap:5px;border-bottom-width:1px}
+.groups .lbl{font-size:calc(12px * var(--z))}
+.chip{border-width:1px;padding:0 9px;min-height:24px;font-size:calc(13px * var(--z))}
+.tag{font-size:calc(11.5px * var(--z));padding:0 7px;margin-bottom:0}
+.list{padding:10px 12px;gap:7px}
+.bubble{border-width:1px;border-left-width:4px;border-radius:3px 10px 10px 10px;padding:6px 10px;box-shadow:none;min-width:min(260px,100%)}
+.bubble .txt{font-size:calc(14.5px * var(--z));cursor:copy}
+.bubble:hover{border-color:var(--accent)}
+.bhead{gap:6px;margin-bottom:3px}
+.btitle{font-size:calc(14.5px * var(--z));font-weight:800;cursor:copy}
+.empty{border-width:1px;border-radius:9px;padding:14px}
+textarea{border-width:1px;padding:5px 8px;line-height:1.5}
+.tinput{border-width:1px;padding:3px 8px;margin-bottom:4px}
+.composer{padding:6px 12px 8px;gap:8px}
+.composer .hint,.nform .hint{font-size:calc(11.5px * var(--z))}
+.notes{border-left-width:1px}
+.notes h2{padding:5px 10px;font-size:calc(14px * var(--z));border-bottom-width:1px;gap:6px}
+.notes h2 select{min-height:26px;font-size:calc(13px * var(--z))}
+.ncap{padding:3px 10px 0;font-size:calc(11px * var(--z))}
+.nlist{padding:8px;gap:6px}
+.note{border-width:1px;border-radius:8px;padding:6px 10px}
+.note.pinned{box-shadow:inset 3px 0 0 var(--accent)}
+.note .pin{font-size:calc(11px * var(--z));padding:0 7px;margin:0 0 3px}
+.note .txt{cursor:copy}
+.nform{padding:6px 10px 8px;gap:5px}
+.subs{margin-top:6px;padding-top:6px;gap:6px}
+.subbar{gap:4px}
+.subpanel{border-width:1px;border-radius:8px;padding:6px 10px}
+.subpanel .txt{cursor:copy}
+.subpanel .sname{margin-bottom:2px}
+.split.v{width:6px}
+.split.hz{height:6px}
+.split.v::after{width:2px;height:32px}
+.split.hz::after{height:2px;width:32px}
+select{border-width:1px;min-height:26px}
+.dlg{border-width:2px;padding:16px;gap:10px}
+.dlg h3{font-size:calc(16px * var(--z))}
+.dlg input[type=text]{border-width:1px;padding:6px 8px}
+.dlg select{min-height:32px;font-size:calc(14px * var(--z))}
+.top{padding:4px 8px}
+/* 右鍵選單 */
+.cmenu{position:fixed;z-index:40;background:var(--card);border:1px solid color-mix(in srgb,var(--ink) 15%,var(--card));border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.22);padding:4px;min-width:150px;font-size:13px;line-height:1.4}
+.cmenu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:6px 10px;border-radius:7px;color:var(--ink);font-weight:500}
+.cmenu button:hover{background:var(--soft2)}
+.cmenu button.danger{color:var(--danger)}
+.cmenu button:disabled{opacity:.45;cursor:default;background:transparent;border:0}
+.cmenu hr{border:0;border-top:1px solid var(--line);margin:3px 6px}
+
 @media (max-width:720px){
   .shell{flex-direction:column;overflow:auto}
   .side{width:auto;border-right:0;border-bottom:2px solid var(--line);flex-direction:row;align-items:center}
@@ -203,8 +265,6 @@ button:disabled,.btn:disabled,.btn.primary:disabled,.btn:disabled:hover{backgrou
     <div class="head">
       <h1 id="catTitle"></h1>
       <input class="search" id="search" type="search" placeholder="搜尋名稱或內容" aria-label="搜尋此分類">
-      <button class="btn small" id="btnRename" type="button">重新命名</button>
-      <button class="btn small danger" id="btnDelCat" type="button">刪除分類</button>
     </div>
     <div class="groups" id="groups"></div>
     <div class="list" id="list"></div>
@@ -213,7 +273,7 @@ button:disabled,.btn:disabled,.btn.primary:disabled,.btn:disabled:hover{backgrou
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-self:stretch">
         <input class="tinput" id="newTitle" type="text" maxlength="60" placeholder="對話框名稱（可不填）" aria-label="對話框名稱">
         <textarea id="newText" placeholder="輸入一段回覆文本，按「新增」建立對話框" aria-label="新增回覆文本"></textarea>
-        <span class="hint">Ctrl + Enter 可快速新增</span>
+        <span class="hint">Ctrl + Enter 快速新增・點文字複製，右鍵更多操作</span>
       </div>
       <button class="btn primary" type="submit">新增</button>
     </form>
@@ -227,7 +287,7 @@ button:disabled,.btn:disabled,.btn.primary:disabled,.btn:disabled:hover{backgrou
     <div class="split hz" data-k="nformH" role="separator" aria-orientation="horizontal" aria-label="調整注意事項輸入區高度" tabindex="0"></div>
     <form class="nform" id="nform">
       <textarea id="newNote" placeholder="輸入注意事項" aria-label="新增注意事項"></textarea>
-      <span class="hint">先選取文字，再按「標紅字」可標成重點紅字</span>
+      <span class="hint">選取文字後按「標紅字」標成重點</span>
       <div class="row">
         <button class="btn small redmark" type="button" id="btnRedNew">標紅字</button>
         <button class="btn small primary" type="submit">新增注意事項</button>
@@ -414,12 +474,16 @@ function render(){
     const n = document.createElement("span"); n.className = "n"; n.textContent = cat.items.length;
     b.append(s); if (cat.fixed) b.append(h("span", "固定", "fx")); b.append(n);
     b.onclick = () => { currentId = cat.id; editingId = null; groupFilter = "all"; $("search").value = ""; render(); };
+    b.title = "右鍵：重新命名、刪除";
+    b.oncontextmenu = e => menu(e, [
+      ["重新命名", () => nameDlg("重新命名分類", cat.name, v => { cat.name = v; save(); render(); })],
+      "-",
+      [cat.fixed ? "刪除分類（固定分類不能刪除）" : "刪除分類", () => delCat(cat), cat.fixed ? "disabled" : "danger"]
+    ]);
     li.append(b); ul.append(li);
   });
   $("catTitle").textContent = c ? c.name : "尚無分類";
-  ["btnRename","btnDelCat","search","newText"].forEach(id => $(id).disabled = !c);
-  const locked = !!(c && c.fixed);
-  $("btnDelCat").disabled = !c || locked; $("btnDelCat").textContent = locked ? "固定分類，不能刪除" : "刪除分類";
+  ["search","newText"].forEach(id => $(id).disabled = !c);
   const list = $("list"); list.textContent = "";
   if (c && groupFilter !== "all" && groupFilter !== "none" && !c.groups.some(g => g.id === groupFilter)) groupFilter = "all";
   renderGroups(c);
@@ -435,38 +499,55 @@ function renderGroups(c){
   if (!c) { bar.style.display = "none"; return; }
   bar.style.display = "";
   bar.append(h("span", "分類群組", "lbl"));
-  const chip = (key, label, n) => {
+  const chip = (key, label, n, g) => {
     const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", String(groupFilter === key));
     b.append(label); const s = h("span", String(n), "n"); b.append(s);
     b.onclick = () => { groupFilter = key; editingId = null; render(); };
+    if (g) { b.title = "右鍵：重新命名、複製整組、刪除"; b.oncontextmenu = e => menu(e, groupMenu(c, g)); }
     bar.append(b);
   };
   chip("all", "全部", c.items.length);
-  c.groups.forEach(g => chip(g.id, g.name, c.items.filter(i => i.group === g.id).length));
+  c.groups.forEach(g => chip(g.id, g.name, c.items.filter(i => i.group === g.id).length, g));
   if (c.groups.length) chip("none", "未分組", c.items.filter(i => !i.group).length);
   bar.append(mkBtn("＋ 新增群組", "", () => nameDlg("新增分類群組", "", v => {
     if (c.groups.some(g => g.name === v)) { toast("已經有同名的群組"); return; }
     const g = { id: uid(), name: v }; c.groups.push(g); groupFilter = g.id; save(); render();
   })));
-  const g = c.groups.find(x => x.id === groupFilter);
-  if (g) {
-    const tools = h("div", null, "gtools");
-    tools.append(
-      mkBtn("重新命名群組", "", () => nameDlg("重新命名群組", g.name, v => {
-        if (c.groups.some(x => x !== g && x.name === v)) { toast("已經有同名的群組"); return; }
-        g.name = v; save(); render(); })),
-      mkBtn("複製整組文本", "primary", () => {
-        const t = c.items.filter(i => i.group === g.id).map(i => i.text);
-        if (!t.length) { toast("這個群組還沒有文本"); return; }
-        copyText(t.join("\n\n")); }),
-      mkBtn("刪除群組", "danger", () => confirmDlg("刪除群組「" + g.name + "」？", "只會刪除群組標記，裡面的文本會保留並改為「未分組」。", "刪除群組", () => {
-        c.items.forEach(i => { if (i.group === g.id) i.group = null; });
-        c.groups = c.groups.filter(x => x.id !== g.id); groupFilter = "all"; save(); render(); toast("已刪除群組"); }))
-    );
-    bar.append(tools);
-  }
 }
-function moveDlg(c, i){
+function groupMenu(c, g){
+  return [
+    ["重新命名群組", () => nameDlg("重新命名群組", g.name, v => {
+      if (c.groups.some(x => x !== g && x.name === v)) { toast("已經有同名的群組"); return; }
+      g.name = v; save(); render(); })],
+    ["複製整組文本", () => {
+      const t = c.items.filter(i => i.group === g.id).map(i => i.text);
+      if (!t.length) { toast("這個群組還沒有文本"); return; }
+      copyText(t.join("\n\n"), "已複製 " + t.length + " 段文本"); }],
+    "-",
+    ["刪除群組", () => confirmDlg("刪除群組「" + g.name + "」？", "只會刪除群組標記，裡面的文本會保留並改為「未分組」。", "刪除群組", () => {
+      c.items.forEach(i => { if (i.group === g.id) i.group = null; });
+      c.groups = c.groups.filter(x => x.id !== g.id); groupFilter = "all"; save(); render(); toast("已刪除群組"); }), "danger"]
+  ];
+}
+function delCat(c){
+  if (c.fixed) return;
+  confirmDlg("刪除分類「" + c.name + "」？", "分類內的 " + c.items.length + " 段文本會一起刪除，無法復原。建議先匯出 .txt 備份。", "刪除分類", () => {
+    data.categories = data.categories.filter(x => x.id !== c.id); if (currentId === c.id) currentId = data.categories[0] ? data.categories[0].id : null; save(); render(); toast("已刪除分類"); });
+}
+/* 設定群組（原本在對話框下方的下拉選單） */
+function groupDlg(c, i){
+  openDlg(d => {
+    const sel = document.createElement("select"); sel.id = "grpSel";
+    const o0 = document.createElement("option"); o0.value = ""; o0.textContent = "未分組"; sel.append(o0);
+    c.groups.forEach(g => { const o = document.createElement("option"); o.value = g.id; o.textContent = g.name; sel.append(o); });
+    sel.value = i.group || "";
+    const row = h("div", null, "row");
+    row.append(dBtn("取消", "", closeDlg), dBtn("確定", "primary", () => {
+      i.group = sel.value || null; save(); render(); closeDlg(); toast(i.group ? "已設定群組" : "已改為未分組"); }));
+    const l = h("label", "放進哪個群組"); l.htmlFor = "grpSel";
+    d.append(h("h3", "設定群組"), l, sel, row);
+  });
+}function moveDlg(c, i){
   const others = data.categories.filter(x => x.id !== c.id);
   if (!others.length) { toast("沒有其他分類可以移動"); return; }
   openDlg(d => {
@@ -493,48 +574,41 @@ function moveDlg(c, i){
     d.append(h("h3", "移動對話框"), pv, l1, sc, l2, sg, row);
   });
 }
-function groupSelect(c, i){
-  const sel = document.createElement("select"); sel.id = "grp-" + i.id; sel.setAttribute("aria-label", "分類群組");
-  const o0 = document.createElement("option"); o0.value = ""; o0.textContent = "未分組"; sel.append(o0);
-  c.groups.forEach(g => { const o = document.createElement("option"); o.value = g.id; o.textContent = "群組：" + g.name; sel.append(o); });
-  sel.value = i.group || "";
-  sel.onchange = () => { i.group = sel.value || null; save(); render(); toast(i.group ? "已標記群組" : "已改為未分組"); };
-  if (!c.groups.length) { sel.disabled = true; o0.textContent = "尚無群組"; }
-  return sel;
-}
 function emptyBox(t){ const d = document.createElement("div"); d.className = "empty"; d.textContent = t; return d; }
 function mkBtn(label, cls, fn){ const b = document.createElement("button"); b.type = "button"; b.className = "btn small " + (cls||""); b.textContent = label; b.onclick = fn; return b; }
 function viewBubble(c, i){
   const el = document.createElement("article"); el.className = "bubble";
-  const t = document.createElement("div"); t.className = "txt"; t.textContent = i.text;
-  const a = document.createElement("div"); a.className = "acts";
-  a.append(
-    mkBtn("複製", "primary", () => copyText(i.text)),
-    mkBtn("編輯", "", () => { editingId = i.id; render(); }),
-    mkBtn("刪除", "danger", () => confirmDlg("刪除這段文本？", i.text.slice(0, 80) + (i.text.length > 80 ? "…" : ""), "刪除", () => {
-      c.items = c.items.filter(x => x.id !== i.id); save(); render(); toast("已刪除");
-    }))
-  );
-  a.append(mkBtn("移動", "", () => moveDlg(c, i)));
-  a.append(groupSelect(c, i));
   const g = c.groups.find(x => x.id === i.group);
   const safety = c.fixed === "safety";   // 「職安注意事項」專屬：事項裡可以加小按鈕
-  if (g || i.title || safety) {
+  if (g || i.title) {
     const hd = h("div", null, "bhead");
     if (g) hd.append(h("div", g.name, "tag"));
-    if (i.title) { hd.append(h("div", i.title, "btitle")); const cb = mkBtn("複製名稱", "tiny", () => copyText(i.title, "已複製名稱")); hd.append(cb); }
-    if (safety) {
-      const add = mkBtn("＋", "plus", () => nameDlg("新增小按鈕（輸入按鈕名稱）", "", v => {
-        const sb = { id: uid(), name: v, text: "" }; (i.subs = i.subs || []).push(sb);
-        openSub[i.id] = sb.id; editingSub = sb.id; save(); render();
-      }));
-      add.setAttribute("aria-label", "新增小按鈕"); add.title = "新增小按鈕"; hd.append(add);
-    }
+    if (i.title) { const bt = h("div", i.title, "btitle"); bt.title = "點一下複製名稱"; bt.onclick = () => clickCopy(i.title, "已複製名稱"); hd.append(bt); }
     el.append(hd);
   }
+  const t = h("div", i.text, "txt"); t.title = "點一下複製・右鍵更多操作";
+  t.onclick = () => clickCopy(i.text);
   el.append(t);
   if (safety && i.subs && i.subs.length) el.append(subArea(i));
-  el.append(a); return el;
+  el.oncontextmenu = e => {
+    if (e.target.closest(".subs")) return;
+    menu(e, [
+      ["複製", () => copyText(i.text)],
+      i.title && ["複製名稱", () => copyText(i.title, "已複製名稱")],
+      ["編輯", () => { editingId = i.id; render(); }],
+      ["移動到其他分類…", () => moveDlg(c, i)],
+      ["設定群組…", () => groupDlg(c, i), c.groups.length ? "" : "disabled"],
+      safety && ["新增小按鈕…", () => nameDlg("新增小按鈕（輸入按鈕名稱）", "", v => {
+        const sb = { id: uid(), name: v, text: "" }; (i.subs = i.subs || []).push(sb);
+        openSub[i.id] = sb.id; editingSub = sb.id; save(); render();
+      })],
+      "-",
+      ["刪除", () => confirmDlg("刪除這段文本？", i.text.slice(0, 80) + (i.text.length > 80 ? "…" : ""), "刪除", () => {
+        c.items = c.items.filter(x => x.id !== i.id); save(); render(); toast("已刪除");
+      }), "danger"]
+    ]);
+  };
+  return el;
 }
 const openSub = {};
 let editingSub = null;
@@ -544,6 +618,8 @@ function subArea(i){
     const b = document.createElement("button"); b.type = "button"; b.className = "chip sub"; b.textContent = sb.name;
     b.setAttribute("aria-expanded", String(openSub[i.id] === sb.id));
     b.onclick = () => { openSub[i.id] = openSub[i.id] === sb.id ? null : sb.id; editingSub = null; render(); };
+    b.title = "點一下展開・右鍵更多操作";
+    b.oncontextmenu = e => menu(e, subMenu(i, sb));
     bar.append(b);
   });
   box.append(bar);
@@ -558,17 +634,23 @@ function subArea(i){
     acts.append(mkBtn("儲存", "primary", done), mkBtn("取消", "", () => { editingSub = null; render(); }));
     panel.append(ta, acts); setTimeout(() => ta.focus(), 0);
   } else {
-    const t = h("div", sb.text || "還沒有內容，請按「編輯內容」輸入。", "txt" + (sb.text ? "" : " none"));
-    acts.append(
-      mkBtn("複製", "primary", () => sb.text ? copyText(sb.text) : toast("還沒有內容可以複製")),
-      mkBtn("編輯內容", "", () => { editingSub = sb.id; render(); }),
-      mkBtn("重新命名", "", () => nameDlg("重新命名小按鈕", sb.name, v => { sb.name = v; save(); render(); })),
-      mkBtn("刪除按鈕", "danger", () => confirmDlg("刪除小按鈕「" + sb.name + "」？", "按鈕和它的內容會一起刪除。", "刪除", () => {
-        i.subs = i.subs.filter(x => x.id !== sb.id); openSub[i.id] = null; save(); render(); toast("已刪除"); }))
-    );
-    panel.append(t, acts);
+    const t = h("div", sb.text || "還沒有內容，按右鍵 →「編輯內容」輸入。", "txt" + (sb.text ? "" : " none"));
+    t.title = "點一下複製・右鍵更多操作";
+    t.onclick = () => { if (sb.text) clickCopy(sb.text); else { editingSub = sb.id; render(); } };
+    panel.oncontextmenu = e => menu(e, subMenu(i, sb));
+    panel.append(t);
   }
   box.append(panel); return box;
+}
+function subMenu(i, sb){
+  return [
+    ["複製內容", () => sb.text ? copyText(sb.text) : toast("還沒有內容可以複製"), sb.text ? "" : "disabled"],
+    ["編輯內容", () => { openSub[i.id] = sb.id; editingSub = sb.id; render(); }],
+    ["重新命名", () => nameDlg("重新命名小按鈕", sb.name, v => { sb.name = v; save(); render(); })],
+    "-",
+    ["刪除按鈕", () => confirmDlg("刪除小按鈕「" + sb.name + "」？", "按鈕和它的內容會一起刪除。", "刪除", () => {
+      i.subs = i.subs.filter(x => x.id !== sb.id); openSub[i.id] = null; save(); render(); toast("已刪除"); }), "danger"]
+  ];
 }
 function editBubble(c, i){
   const el = document.createElement("article"); el.className = "bubble"; el.style.width = "100%";
@@ -583,6 +665,34 @@ function editBubble(c, i){
 }
 
 const toast = msg => FT.toast(msg);
+/* ===== 右鍵選單；左鍵點文字＝複製 ===== */
+let menuEl = null;
+function closeMenu(){ if (menuEl) { menuEl.remove(); menuEl = null; } }
+// items：[文字, 動作, "danger"|"disabled"]，"-" 為分隔線，false 會略過
+function menu(e, items){
+  e.preventDefault(); e.stopPropagation(); closeMenu(); if (FT.closeMenu) FT.closeMenu();
+  const m = h("div", null, "cmenu");
+  items.filter(Boolean).forEach(it => {
+    if (it === "-") { if (m.lastChild && m.lastChild.tagName !== "HR") m.append(document.createElement("hr")); return; }
+    const b = h("button", it[0]); b.type = "button";
+    if (it[2] === "disabled") b.disabled = true; else if (it[2]) b.className = it[2];
+    b.onclick = () => { closeMenu(); it[1](); };
+    m.append(b);
+  });
+  if (m.lastChild && m.lastChild.tagName === "HR") m.lastChild.remove();
+  root.append(m); menuEl = m;
+  const x = Math.min(e.clientX, window.innerWidth - m.offsetWidth - 4), y = e.clientY + m.offsetHeight > window.innerHeight - 4 ? Math.max(4, e.clientY - m.offsetHeight) : e.clientY;
+  m.style.left = Math.max(4, x) + "px"; m.style.top = y + "px";
+}
+document.addEventListener("mousedown", e => { if (menuEl && !e.composedPath().includes(menuEl)) closeMenu(); }, true);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
+window.addEventListener("blur", closeMenu);
+root.addEventListener("scroll", closeMenu, true);
+function clickCopy(text, msg){
+  const sl = getSel();
+  if (sl && !sl.isCollapsed && sl.toString().trim()) return;    // 正在選取部分文字時不要整段複製
+  copyText(text, msg);
+}
 async function copyText(text, msg){
   const ok = await FT.copyText(text);
   toast(ok ? (msg || "已複製") : "無法自動複製，請手動選取文字");
@@ -612,10 +722,6 @@ function nameDlg(title, initial, onOk){
 
 /* ===== 分類操作 ===== */
 $("btnAddCat").onclick = () => nameDlg("新增分類", "", v => { const c = { id: uid(), name: v, groups: [], items: [] }; data.categories.push(c); currentId = c.id; save(); render(); });
-$("btnRename").onclick = () => { const c = cur(); if (c) nameDlg("重新命名分類", c.name, v => { c.name = v; save(); render(); }); };
-$("btnDelCat").onclick = () => { const c = cur(); if (!c || c.fixed) return;
-  confirmDlg("刪除分類「" + c.name + "」？", "分類內的 " + c.items.length + " 段文本會一起刪除，無法復原。建議先匯出 .txt 備份。", "刪除分類", () => {
-    data.categories = data.categories.filter(x => x.id !== c.id); currentId = data.categories[0] ? data.categories[0].id : null; save(); render(); toast("已刪除分類"); }); };
 $("search").oninput = render;
 
 /* ===== 新增文本 ===== */
@@ -676,14 +782,17 @@ function renderNotes(){
     } else {
       if (n.pin) el.append(h("div", "已釘選", "pin"));
       const t = document.createElement("div"); t.className = "txt"; fillRed(t, n.t);
-      a.append(
-        mkBtn("複製", "primary", () => copyText(plain(n.t))),
-        mkBtn("編輯", "", () => { editingNote = n.id; renderNotes(); }),
-        mkBtn(n.pin ? "取消釘選" : "釘選", "", () => { n.pin = !n.pin || undefined; touch(n); renderNotes(); toast(n.pin ? "已釘選到最上方" : "已取消釘選"); }),
-        mkBtn("刪除", "danger", () => confirmDlg("刪除這則注意事項？", plain(n.t).slice(0, 80), "刪除", () => {
-          FT.markDeleted(n.id); imp().items = imp().items.filter(x => x !== n); FT.saveImp(); renderNotes(); toast("已刪除"); }))
-      );
-      el.append(t, a);
+      t.title = "點一下複製・右鍵更多操作";
+      t.onclick = () => clickCopy(plain(n.t));
+      el.oncontextmenu = e => menu(e, [
+        ["複製", () => copyText(plain(n.t))],
+        ["編輯", () => { editingNote = n.id; renderNotes(); }],
+        [n.pin ? "取消釘選" : "釘選到最上方", () => { n.pin = !n.pin || undefined; touch(n); renderNotes(); toast(n.pin ? "已釘選到最上方" : "已取消釘選"); }],
+        "-",
+        ["刪除", () => confirmDlg("刪除這則注意事項？", plain(n.t).slice(0, 80), "刪除", () => {
+          FT.markDeleted(n.id); imp().items = imp().items.filter(x => x !== n); FT.saveImp(); renderNotes(); toast("已刪除"); }), "danger"]
+      ]);
+      el.append(t);
     }
     box.append(el);
   });

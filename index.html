@@ -130,6 +130,11 @@
   .imenu button:hover{background:var(--soft)}
   .imenu button.danger{color:var(--warn)}
   .imenu button.danger:hover{background:var(--warn-soft)}
+  .imenu.ctx{min-width:150px;z-index:20}
+  .imenu hr{border:0;border-top:1px solid var(--line);margin:3px 6px}
+  .imenu button[disabled]{opacity:.45;cursor:default}
+  .imenu button[disabled]:hover{background:transparent}
+  .prow .pt,.nrow .nt{cursor:copy}
   .erow{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:13px;flex-wrap:wrap}
   .erow > .el{width:56px;color:var(--muted);flex-shrink:0}
   .erow input[type=text],.erow .grow{flex:1;min-width:0}
@@ -315,7 +320,7 @@
   .prow:last-child{border-bottom:0}
   .prow:hover{background:var(--soft)}
   .prow .pn{color:var(--muted);font-size:11px;min-width:16px;text-align:right;padding-top:2px;font-variant-numeric:tabular-nums}
-  .prow .pt{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word;user-select:text;cursor:text}
+  .prow .pt{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word;user-select:text}
   .prow .pin2{flex:1;padding:4px 6px;font-size:13px}
   .prow .pd{font-size:11px;color:var(--muted);white-space:nowrap;padding-top:2px}
   .prow.link{cursor:pointer}
@@ -547,7 +552,7 @@
     <section id="tab-must" class="hidden">
       <div class="seg-row">
         <div class="seg" id="seg"></div>
-        <button class="more" id="moreBtn" title="其他週期：不定期、半年">
+        <button class="more" id="moreBtn" title="其他週期：不定期、半年、無限期">
           <span id="moreLbl"></span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           <span class="n" id="moreN"></span>
@@ -757,7 +762,7 @@
   const WD = ['日','一','二','三','四','五','六'];
   const WD_ORDER = [1,2,3,4,5,6,0];
   const PERIODS = [['daily','每日'],['weekly','每週'],['monthly','每月'],['quarterly','每季'],['yearly','每年']];
-  const SPECIAL = [['irregular','不定期'],['halfyear','半年']];
+  const SPECIAL = [['irregular','不定期'],['halfyear','半年'],['forever','無限期']];
   const ALLP = [...PERIODS, ...SPECIAL];
   const pName = k => ALLP.find(p => p[0] === k)[1];
   const HOUR = 3600e3;
@@ -767,7 +772,7 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   // ================= 資料 =================
-  const blankReq = () => ({daily:[],weekly:[],monthly:[],quarterly:[],yearly:[],irregular:[],halfyear:[]});
+  const blankReq = () => ({daily:[],weekly:[],monthly:[],quarterly:[],yearly:[],irregular:[],halfyear:[],forever:[]});
   const blank = () => ({ v: 2, user: null, tasks: [], required: blankReq(), reqDone: {}, deleted: {},
                          notified: {}, pinned: false, calOpen: true, theme: null, imports: [], history: null, imp: null, doneLog: [] });
   let state = blank();
@@ -836,6 +841,7 @@
     if (p === 'monthly') return [`${y} 年 ${m+1} 月`, '每月 1 日自動重置｜可設定日期範圍，設定時間則在最後一天到期前 1 小時提醒'];
     if (p === 'quarterly') { const q = Math.floor(m/3); return [`${y} 年第 ${q+1} 季（${q*3+1}–${q*3+3} 月）`, '每季第一天自動重置勾選']; }
     if (p === 'irregular') return ['不定期', '週期性：每 N 天／週／個月重複，每期自動重置｜一次性：單日、跳日（多個日期）或一段期間，做完就結束｜設定時間會在到期前 1 小時提醒'];
+    if (p === 'forever') return ['無限期', '沒有期限，做完勾選就好｜還沒完成前，每天都會顯示在今天的行程'];
     if (p === 'halfyear') return ['半年・每 6 個月一期', '每筆可指定起始年月日，例如 2026/03/15 起：3/15–9/14、9/15–隔年 3/14 各為一期，每期開始時自動重置'];
     return [`${y} 年`, '每年 1 月 1 日自動重置勾選'];
   }
@@ -893,6 +899,7 @@
   }
   const irrSpan = r => isOnce(r) ? onceOcc(r) : irrCycle(r);
   function occursOn(r, k, d) {
+    if (k === 'forever') return false;
     if (k === 'irregular' && isOnce(r)) {
       if (r.once === 'day') return r.date === d;
       if (r.once === 'dates') return (r.dates || []).includes(d);
@@ -911,6 +918,7 @@
   }
   // 某一天是否輪到這個必做事項（未來行程用）；沒有指定日子的事項在週期內每天都顯示
   function occursOnAll(r, k, d) {
+    if (k === 'forever') return false;               // 無限期：只在「今天」顯示，不排到未來日期
     if (k === 'irregular' || k === 'halfyear') return occursOn(r, k, d);
     const t = parseD(d);
     if (k === 'weekly') return hasDays(r) ? r.days.includes(t.getDay()) : true;
@@ -929,6 +937,7 @@
     if (k === 'daily' || (k === 'weekly' && hasDays(r))) return `${r.id}|${d}`;
     if (k === 'irregular') return `${r.id}|${isOnce(r) ? (r.once === 'dates' ? d : 'once') : d}`;
     if (k === 'halfyear') return `${r.id}|H${d}`;
+    if (k === 'forever') return `${r.id}|forever`;
     return `${r.id}|${periodKey(k, parseD(d))}`;
   }
   function doneOn(r, k, d) {
@@ -936,6 +945,7 @@
     if (k === 'daily' || (k === 'weekly' && hasDays(r))) key = d;
     else if (k === 'irregular') key = isOnce(r) ? (r.once === 'dates' ? d : 'once') : d;
     else if (k === 'halfyear') key = 'H' + d;
+    else if (k === 'forever') key = 'forever';
     else key = periodKey(k, parseD(d));
     return (state.reqDone[`${r.id}|${key}`] || 0) > 0;
   }
@@ -944,6 +954,7 @@
     if (p === 'weekly' && hasDays(r)) return `${r.id}|${fmt(weeklyOcc(r))}`;
     if (p === 'irregular') { const c = irrCycle(r); return `${r.id}|${c.before ? 'pre' : fmt(c.start)}`; }
     if (p === 'halfyear') { const c = halfCycle(r); return `${r.id}|H${c.before ? 'pre' : fmt(c.start)}`; }
+    if (p === 'forever') return `${r.id}|forever`;      // 沒有週期：勾選一次就一直是完成
     return `${r.id}|${periodKey(p)}`;
   }
   const isReqDone = (r, p) => (state.reqDone[reqKey(r, p)] || 0) > 0;   // 正數＝勾選時間，負數＝取消時間
@@ -1058,6 +1069,10 @@
       const left = dayDiff(parseD(today), c.end);
       if (left === 0) { const s = r.time ? status(false, today, r.time) : ''; return [s || 'today', tagText[s] || '今天截止']; }
       return ['active', `剩 ${left + 1} 天`];
+    }
+    if (p === 'forever') {
+      const n = r.c ? dayDiff(parseD(fmt(new Date(r.c))), parseD(today)) : 0;
+      return ['active', n > 0 ? `已 ${n} 天` : '無期限'];
     }
     if (p === 'halfyear') {
       const hc = halfCycle(r);
@@ -1175,7 +1190,7 @@
         <span class="time">${t.time || '全天'}</span>
         ${itemBody(t)}
         ${st ? `<span class="tag">${tagText[st]}</span>` : ''}
-        ${noteBtn(t)}<button class="more2" title="編輯／複製／刪除">⋯</button>${notePanel(t)}</li>`;
+        ${notePanel(t)}</li>`;
     }).join('') : `<li class="empty">這天還沒有安排，從上方新增吧</li>`;
     renderPlanMust();
   }
@@ -1250,8 +1265,7 @@
     const view = [...ss].sort((a, b) => subDone(r, p, a) - subDone(r, p, b));
     return `<div class="subs" data-rid="${r.id}">${view.map(sb => subEdit === sb.id
         ? `<div class="srow" data-sid="${sb.id}"><input class="field sin" value="${esc(sb.t)}"><button class="okbtn" data-sa="save" title="編輯完成"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button class="ni" data-sa="cancel" title="取消">×</button></div>`
-        : `<div class="srow ${subDone(r, p, sb) ? 'sdone' : ''}" data-sid="${sb.id}"><input type="checkbox" class="chk schk" ${subDone(r, p, sb) ? 'checked' : ''}><span class="st" title="雙擊編輯">${esc(sb.t)}</span>
-            <span class="sacts"><button class="ni" data-sa="edit" title="編輯">${ICON_EDIT}</button><button class="ni" data-sa="copy" title="複製">${ICON_COPY}</button><button class="ni danger" data-sa="del" title="刪除">×</button></span></div>`).join('')}
+        : `<div class="srow ${subDone(r, p, sb) ? 'sdone' : ''}" data-sid="${sb.id}"><input type="checkbox" class="chk schk" ${subDone(r, p, sb) ? 'checked' : ''}><span class="st" title="雙擊編輯・右鍵更多操作">${esc(sb.t)}</span></div>`).join('')}
       ${subAddFor === r.id
         ? `<div class="srow"><input class="field sin snew" placeholder="新增細節，按 Enter 加入" autocomplete="off"><button class="okbtn" data-sa="add" title="加入"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button class="ni" data-sa="close" title="結束新增">×</button></div>`
         : `<button class="sadd" data-sa="open">＋ 新增細節</button>`}</div>`;
@@ -1364,6 +1378,7 @@
     if (must === 'monthly') { const k = r => { const g = (r.from || r.to) ? mRange(r) : null; return g ? g[0]*100 + g[1] : 9999; }; sorted.sort((a, b) => k(a) - k(b)); }
     if (must === 'irregular') sorted.sort((a, b) => (isReqDone(a, must) - isReqDone(b, must)) || (irrSpan(a).end - irrSpan(b).end));
     if (must === 'halfyear') sorted.sort((a, b) => halfCycle(a).end - halfCycle(b).end);
+    if (must === 'forever') sorted.sort((a, b) => (isReqDone(a, must) - isReqDone(b, must)) || ((a.c || 0) - (b.c || 0)));
     $('#mustList').innerHTML = sorted.length ? sorted.map(r => {
       const dn = isReqDone(r, must);
       const [st, tag] = reqStatus(r, must, dn);
@@ -1373,7 +1388,7 @@
         ${meta && meta.length <= 12 ? `<span class="meta">${meta}</span>` : ''}
         ${itemBody(r, meta && meta.length > 12 ? meta : '')}
         ${tag ? `<span class="tag">${tag}</span>` : ''}
-        ${subProg(r, must)}${noteBtn(r)}<button class="more2" title="編輯／複製／刪除">⋯</button>${notePanel(r)}${subsBlock(r, must, dn)}</li>`;
+        ${subProg(r, must)}${notePanel(r)}${subsBlock(r, must, dn)}</li>`;
     }).join('') : `<li class="empty">還沒有${pName(must)}必辦事項</li>`;
   }
   function renderOpts() {
@@ -1412,6 +1427,7 @@
   const SP_DESC = {
     irregular: ['<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>', '週期性，或一次性的單日／跳日／期間'],
     halfyear: ['<svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>', '每 6 個月一次，可指定起始月份'] };
+  SP_DESC.forever = ['<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.2 8.4a5 5 0 1 1 0 7.2L12 12 5.8 8.4a5 5 0 1 0 0 7.2L12 12z"/></svg>', '沒有期限，做完勾選就好；完成前每天都會顯示'];
   function renderDrawer() {
     $('#dlist').innerHTML = SPECIAL.map(([k, n]) => {
       const all = state.required[k].length, open = state.required[k].filter(r => isOpen(r, k)).length;
@@ -1439,7 +1455,7 @@
     const ns = notesOf(x);
     // 預設顯示前兩條，其餘收合
     const pv = ns.length ? `<div class="note-pvs" data-nt title="點開全部備註">${ns.slice(0, 2).map((n, i) => `<div class="note-pv"><span class="pvn">${i + 1}</span>${esc(n.t)}</div>`).join('')}${ns.length > 2 ? `<div class="note-more">⋯ 還有 ${ns.length - 2} 條，點開查看</div>` : ''}</div>` : '';
-    return `<div class="body"><span class="text" title="雙擊可編輯">${esc(x.text)}</span>${sub ? `<span class="meta sub-meta">${sub}</span>` : ''}${pv}</div>`;
+    return `<div class="body"><span class="text" title="雙擊編輯・右鍵更多操作">${esc(x.text)}</span>${sub ? `<span class="meta sub-meta">${sub}</span>` : ''}${pv}</div>`;
   }
   const noteBtn = x => { const n = notesOf(x).length; return `<button class="nbtn ${n ? 'has' : ''} ${noteOpen === x.id ? 'open' : ''}" title="${n ? `備註（${n} 條）` : '新增備註'}">${NOTE_ICON}</button>`; };
   function notePanel(x) {
@@ -1448,12 +1464,10 @@
     const rows = ns.map((n, i) => noteEdit === n.id
       ? `<li class="nrow" data-nid="${n.id}"><span class="no">${i + 1}</span><input class="field nedit" value="${esc(n.t)}">
           <button class="okbtn" data-na="save" title="編輯完成">${ICON_OK}</button><button class="ni" data-na="cancel" title="取消">×</button></li>`
-      : `<li class="nrow" data-nid="${n.id}"><span class="no">${i + 1}</span><span class="nt" title="雙擊編輯">${esc(n.t)}</span>
-          <span class="nacts"><button class="ni" data-na="copy" title="複製這條">${ICON_COPY}</button><button class="ni" data-na="edit" title="編輯">${ICON_EDIT}</button><button class="ni danger" data-na="del" title="刪除這條">×</button></span></li>`).join('');
+      : `<li class="nrow" data-nid="${n.id}"><span class="no">${i + 1}</span><span class="nt" title="點一下複製・雙擊編輯・右鍵更多操作">${esc(n.t)}</span></li>`).join('');
     return `<div class="note-panel">
       ${ns.length ? `<ol class="nlist">${rows}</ol>` : '<div class="nempty">還沒有備註，從下方逐條新增</div>'}
       <div class="nadd"><input class="field nnew" placeholder="新增一條備註，按 Enter 加入" autocomplete="off"><button class="nb" data-na="add">新增</button><button class="okbtn" data-na="done" title="編輯完成">${ICON_OK}</button></div>
-      ${ns.length > 1 ? '<div class="note-actions"><button class="nb" data-na="copyall">全部複製</button></div>' : ''}
     </div>`;
   }
   async function copyText(t) {
@@ -1472,6 +1486,8 @@
       if (noteOpen === x.id) { noteOpen = null; noteEdit = null; } else { noteOpen = x.id; noteEdit = null; }
       rerender(); if (noteOpen) focusIn('.note-panel .nnew'); return true;
     }
+    const ntEl = e.target.closest('.nrow[data-nid] .nt');
+    if (ntEl) { const n0 = notesOf(x).find(v => v.id === ntEl.closest('.nrow').dataset.nid); if (n0) clickCopy(n0.t); return true; }
     if (e.target.closest('.note-panel') && !e.target.closest('[data-na]')) return true;
     const b = e.target.closest('[data-na]'); if (!b) return false;
     const a = b.dataset.na, panel = b.closest('.note-panel'), row = b.closest('.nrow');
@@ -1501,7 +1517,7 @@
       touch(); noteEdit = null; rerender();
     }
     if (a === 'del' && n) {
-      if (b.dataset.confirm !== '1') {
+      if (b.dataset.confirm !== '1' && !b.dataset.direct) {
         b.dataset.confirm = '1'; b.classList.add('confirm'); b.textContent = '刪除？';
         setTimeout(() => { if (b.isConnected) { b.dataset.confirm = ''; b.classList.remove('confirm'); b.textContent = '×'; } }, 3000);
         return true;
@@ -1665,7 +1681,6 @@
     const t = state.tasks.find(x => x.id === li.dataset.id); if (!t) return;
     if (noteClick(e, t, renderDay)) return;
     if (e.target.classList.contains('chk')) { t.done = e.target.checked; t.u = now(); save(); renderAll(); }
-    const mb = e.target.closest('.more2'); if (mb) openItemMenu(mb, 'task', t.id);
   });
   $('#planMust').addEventListener('click', e => {
     const li = e.target.closest('.item'); if (!li) return;
@@ -1762,6 +1777,7 @@
       if (iOnce === 'range') { const a = oFrom || today, b = oTo || a; [it.rangeStart, it.rangeEnd] = a <= b ? [a, b] : [b, a]; }
     } else if (must === 'irregular') { it.kind = 'cycle'; it.every = Math.max(1, parseInt(iEvery) || 1); it.unit = iUnit; it.start = iStart || today; it.time = tm; }
     if (must === 'halfyear') { it.start = hStart || today; it.startMonth = parseD(it.start).getMonth() + 1; }
+    if (must === 'forever') it.c = now();
     it.notes = takePend('must');
     state.required[must].push(it);
     remember(text, it.time);
@@ -1778,7 +1794,6 @@
       if (e.target.checked) { e.target.checked = false; confirmDone(r, must); }
       else { state.reqDone[reqKey(r, must)] = -now(); unlogDone(r, must); save(); renderAll(); }
     }
-    const mb = e.target.closest('.more2'); if (mb) openItemMenu(mb, 'req', r.id, must);
   });
   $('#mustList').addEventListener('keydown', e => {
     const li = e.target.closest('.item'); const r = li && state.required[must].find(x => x.id === li.dataset.id);
@@ -1857,22 +1872,151 @@
   setupSuggest($('#taskText'), $('#taskTime'), () => true);
   setupSuggest($('#mustText'), $('#mustTime'), () => must === 'daily' || (must === 'weekly' && wdSel.length > 0) || must === 'monthly' || must === 'irregular');
 
-  // ================= 事項選單：編輯／複製／刪除 =================
-  function closeMenu() { document.querySelectorAll('.imenu').forEach(m => m.remove()); document.querySelectorAll('.more2.open').forEach(b => b.classList.remove('open')); }
-  document.addEventListener('mousedown', e => { if (!e.target.closest('.imenu') && !e.target.closest('.more2')) closeMenu(); });
-  function findItem(kind, id, p) { return kind === 'task' ? state.tasks.find(x => x.id === id) : state.required[p].find(x => x.id === id); }
-  function openItemMenu(btn, kind, id, p) {
-    const wasOpen = btn.classList.contains('open'); closeMenu(); if (wasOpen) return;
-    btn.classList.add('open');
-    const m = document.createElement('div'); m.className = 'imenu';
-    m.innerHTML = `<button data-m="edit">✏️ 編輯</button>${kind === 'req' ? '<button data-m="sub">➕ 新增細節</button>' : ''}<button data-m="copy">📄 複製</button>${kind === 'req' ? '<button data-m="log">📜 完成紀錄</button>' : ''}<button data-m="del" class="danger">🗑️ 刪除</button>`;
-    const app = $('#app'); app.appendChild(m);
-    const r = btn.getBoundingClientRect(), a = app.getBoundingClientRect();
-    m.style.right = (a.right - r.right) + 'px';
-    const below = r.bottom - a.top + 4;
-    m.style.top = (below + m.offsetHeight > a.height - 6 ? r.top - a.top - m.offsetHeight - 4 : below) + 'px';
-    m.onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; closeMenu(); itemAction(b.dataset.m, kind, id, p); };
+  // ================= 右鍵選單 =================
+  // 左鍵點文字＝複製（等一下再複製，雙擊編輯時就不會先複製）；右鍵＝編輯、刪除等其他操作
+  function closeMenu() { document.querySelectorAll('.imenu').forEach(m => m.remove()); }
+  document.addEventListener('mousedown', e => { if (!e.target.closest('.imenu')) closeMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+  window.addEventListener('blur', closeMenu);
+  document.addEventListener('scroll', closeMenu, true);
+  let copyTimer = null;
+  document.addEventListener('dblclick', () => clearTimeout(copyTimer), true);
+  const hasSel = () => { const sl = window.getSelection(); return !!(sl && !sl.isCollapsed && sl.toString().trim()); };
+  function clickCopy(text, label = '📋 已複製') {
+    if (hasSel()) return;                            // 正在選取部分文字時不要整段複製
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => copyText(text).then(ok => toast(ok ? label : '無法複製', ok ? text.slice(0, 80) : '', 1800)), 250);
   }
+  // 選單項目沿用原本的按鈕處理：建立一個看不見的按鈕放進該列再點它
+  function vclick(host, attr, val, extra) {
+    const b = document.createElement('button'); b.type = 'button'; b.hidden = true; b.dataset[attr] = val;
+    if (extra) Object.assign(b.dataset, extra);
+    host.appendChild(b); b.click(); b.remove();
+  }
+  // items：[文字, 動作, 'danger'|'disabled']，'-' 為分隔線，false 會略過
+  function ctxMenu(e, items) {
+    e.preventDefault(); closeMenu();
+    const m = document.createElement('div'); m.className = 'imenu ctx';
+    items.filter(Boolean).forEach(it => {
+      if (it === '-') { if (m.lastChild && m.lastChild.tagName !== 'HR') m.appendChild(document.createElement('hr')); return; }
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = it[0];
+      if (it[2] === 'disabled') b.disabled = true; else if (it[2]) b.className = it[2];
+      b.onclick = () => { closeMenu(); it[1](); };
+      m.appendChild(b);
+    });
+    if (m.lastChild && m.lastChild.tagName === 'HR') m.lastChild.remove();
+    const app = $('#app'); app.appendChild(m);
+    const a = app.getBoundingClientRect();
+    let x = e.clientX - a.left, y = e.clientY - a.top;
+    if (x + m.offsetWidth > a.width - 4) x = Math.max(4, a.width - m.offsetWidth - 4);
+    if (y + m.offsetHeight > a.height - 4) y = Math.max(4, y - m.offsetHeight);
+    m.style.left = x + 'px'; m.style.top = y + 'px';
+  }
+  window.FTMenu = { closeMenu };
+  const toastCopy = t => copyText(t).then(ok => toast(ok ? '📋 已複製' : '無法複製', ok ? t.slice(0, 80) : '', 1800));
+  const confirmDel = (title, text, fn) => {
+    showModal(`<h3>${title}</h3><div class="confirm-item">${esc(text)}</div>
+      <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn danger" id="ctxDelOk">🗑️ 刪除</button></div>`);
+    $('#ctxDelOk').onclick = () => { closeModal(); fn(); };
+  };
+  // 行程／必做事項
+  function itemMenu(e, kind, x, p, plan) {
+    const ns = notesOf(x).length, rerender = kind === 'task' ? renderDay : renderMust;
+    ctxMenu(e, [
+      ['✏️ 編輯', () => itemAction('edit', kind, x.id, p)],
+      ['📋 複製文字', () => toastCopy(x.text)],
+      !plan && [`📝 ${noteOpen === x.id ? '收合備註' : ns ? `備註（${ns} 條）` : '新增備註'}`, () => {
+        noteOpen = noteOpen === x.id ? null : x.id; noteEdit = null; rerender(); if (noteOpen) focusIn('.note-panel .nnew'); }],
+      kind === 'req' && !plan && ['➕ 新增細節', () => itemAction('sub', kind, x.id, p)],
+      ['📄 建立副本', () => itemAction('copy', kind, x.id, p)],
+      kind === 'req' && ['📜 完成紀錄', () => itemAction('log', kind, x.id, p)],
+      '-',
+      ['🗑️ 刪除', () => itemAction('del', kind, x.id, p), 'danger']
+    ]);
+  }
+  // 備註列：回傳 true 代表已處理
+  function noteRowMenu(e, x) {
+    const row = e.target.closest('.nrow[data-nid]');
+    if (!row) return !!e.target.closest('.note-panel');
+    if (e.target.closest('input,textarea')) return true;
+    const ns = notesOf(x), n = ns.find(v => v.id === row.dataset.nid); if (!n) return true;
+    ctxMenu(e, [
+      ['📋 複製', () => toastCopy(n.t)],
+      ['✏️ 編輯', () => vclick(row, 'na', 'edit')],
+      ns.length > 1 && ['📋 全部複製', () => copyText(ns.map((v, i) => `${i + 1}. ${v.t}`).join('\n')).then(ok => toast(ok ? `📋 已複製全部 ${ns.length} 條` : '無法複製', '', 2000))],
+      '-',
+      ['🗑️ 刪除', () => confirmDel('確定刪除這條備註？', n.t, () => { const r2 = document.querySelector(`.nrow[data-nid="${n.id}"]`); if (r2) vclick(r2, 'na', 'del', { direct: '1' }); }), 'danger']
+    ]);
+    return true;
+  }
+  // 細節列：回傳 true 代表已處理
+  function subRowMenu(e) {
+    const row = e.target.closest('.subs:not(.archived):not(.psubs) .srow[data-sid]');
+    if (!row || e.target.closest('input')) return false;
+    ctxMenu(e, [
+      ['✏️ 編輯', () => vclick(row, 'sa', 'edit')],
+      ['📄 建立副本', () => vclick(row, 'sa', 'copy')],
+      '-',
+      ['🗑️ 刪除', () => vclick(row, 'sa', 'del'), 'danger']
+    ]);
+    return true;
+  }
+  $('#taskList').addEventListener('contextmenu', e => {
+    const li = e.target.closest('.item'); const t = li && state.tasks.find(x => x.id === li.dataset.id); if (!t) return;
+    if (noteRowMenu(e, t)) { e.preventDefault(); return; }
+    itemMenu(e, 'task', t);
+  });
+  $('#mustList').addEventListener('contextmenu', e => {
+    const li = e.target.closest('.item'); const r = li && state.required[must].find(x => x.id === li.dataset.id); if (!r) return;
+    if (subRowMenu(e)) return;
+    if (noteRowMenu(e, r)) { e.preventDefault(); return; }
+    itemMenu(e, 'req', r, must);
+  });
+  $('#planMust').addEventListener('contextmenu', e => {
+    const li = e.target.closest('.item'); if (!li) return;
+    const k = li.dataset.p, r = state.required[k].find(x => x.id === li.dataset.id); if (!r) return;
+    itemMenu(e, 'req', r, k, true);
+  });
+  // ⚠️ 重要注意事項：條列、記事、分類
+  $('#impBody').addEventListener('contextmenu', e => {
+    const row = e.target.closest('.prow[data-iid]');
+    if (row && !e.target.closest('textarea,input')) {
+      const it = state.imp.items.find(i => i.id === row.dataset.iid); if (!it) return;
+      const n = state.imp.items.filter(i => i.cat === it.cat).length;
+      ctxMenu(e, [
+        ['📋 複製', () => toastCopy(plainRed(it.t))],
+        [it.pin ? '📌 取消釘選' : '📌 釘選到最上方', () => vclick(row, 'ia', 'pin')],
+        ['✏️ 編輯', () => vclick(row, 'ia', 'edit')],
+        !impQ.trim() && n > 1 && ['📋 全部複製', () => vclick(row, 'ia', 'copyall')],
+        '-',
+        ['🗑️ 刪除', () => vclick(row, 'ia', 'del'), 'danger']
+      ]);
+      return;
+    }
+    const pc = e.target.closest('[data-pad]');
+    if (pc) {
+      const pd = state.imp.pads.find(x => x.id === pc.dataset.pad); if (!pd) return;
+      ctxMenu(e, [['📝 開啟', () => pc.click()], ['📋 複製全文', () => padCopy(pd)], '-', ['🗑️ 刪除', () => padDel(pd), 'danger']]);
+    }
+  });
+  $('#impCats').addEventListener('contextmenu', e => {
+    const b = e.target.closest('[data-cat]'); if (!b || b.dataset.cat === 'new') return;
+    const go = a => {
+      if (padOpen) savePad(true);
+      impCat = b.dataset.cat; impQ = ''; $('#impQ').value = ''; padOpen = null; impEdit = null; impRename = false; renderImp();
+      vclick($('#impBody'), 'ca', a);
+    };
+    const c = state.imp.cats.find(x => x.id === b.dataset.cat), list = state.imp.items.filter(i => i.cat === c.id);
+    ctxMenu(e, [
+      ['✏️ 重新命名', () => go('rename')],
+      list.length > 0 && ['📋 複製全部條列', () => copyText(list.filter(i => i.pin).concat(list.filter(i => !i.pin)).map((v, i) => `${i + 1}. ${plainRed(v.t)}`).join('\n')).then(ok => toast(ok ? `📋 已複製 ${list.length} 條` : '無法複製', '', 2000))],
+      '-',
+      ['🗑️ 刪除分類', () => go('del'), 'danger']
+    ]);
+  });
+
+  // ================= 事項動作：編輯／複製／刪除 =================
+  function findItem(kind, id, p) { return kind === 'task' ? state.tasks.find(x => x.id === id) : state.required[p].find(x => x.id === id); }
   const itemDesc = (kind, x, p) => kind === 'task' ? `行程・${md(parseD(x.date))}（${WD[parseD(x.date).getDay()]}）${x.time ? ' ' + x.time : ''}` : `${pName(p)}必做${reqMeta(x, p) ? '・' + reqMeta(x, p) : ''}`;
   const cloneNotes = x => notesOf(x).map(n => ({ id: uid(), t: n.t }));
   function itemAction(act, kind, id, p) {
@@ -2019,8 +2163,7 @@
       h += `<div class="sr-cat">${hlText(c.name, q)}<button data-sr-cat="${c.id}">開啟分類 ›</button></div>`;
       if (li.length) h += `<div class="pad">${li.filter(i => i.pin).concat(li.filter(i => !i.pin)).map(it => impEdit === it.id
           ? `<div class="prow" data-iid="${it.id}"><span class="edcol"><textarea class="field pin2" rows="${Math.min(6, it.t.split('\n').length + 1)}">${esc(it.t)}</textarea><button class="nb" data-ia="red" title="先選取文字再按，標成重點紅字">標紅字</button></span><button class="okbtn" data-ia="save" title="編輯完成（Enter；Shift+Enter 換行）">${OKSVG}</button><button class="ni" data-ia="cancel" title="取消">×</button></div>`
-          : `<div class="prow${it.pin ? ' pinned' : ''}" data-iid="${it.id}"><span class="sr-kind">條列</span><span class="pt" title="雙擊編輯">${it.pin ? '<span class="pinb">釘選</span>' : ''}${hlRed(it.t, q)}</span>
-              <span class="acts"><button class="ni" data-ia="copy" title="複製">${ICO.copy}</button><button class="ni${it.pin ? ' on' : ''}" data-ia="pin" title="${it.pin ? '取消釘選' : '釘選到最上方'}">📌</button><button class="ni" data-ia="edit" title="編輯">${ICO.edit}</button><button class="ni danger" data-ia="del" title="刪除">×</button></span></div>`).join('')}</div>`;
+          : `<div class="prow${it.pin ? ' pinned' : ''}" data-iid="${it.id}"><span class="sr-kind">條列</span><span class="pt" title="點一下複製・雙擊編輯・右鍵更多操作">${it.pin ? '<span class="pinb">釘選</span>' : ''}${hlRed(it.t, q)}</span></div>`).join('')}</div>`;
       if (lp.length) h += `<div class="padlist" style="margin-top:6px">${lp.sort((a, b) => b.u - a.u).map(pd => `<button class="padcard" data-pad="${pd.id}"><b>📝 ${hlText(pd.title || '（未命名）', qNorm(pd.title).includes(q) ? q : '')}</b>
           <span>${padSnippet(pd, q)}</span><small>${dt(pd.u)}</small></button>`).join('')}</div>`;
     });
@@ -2042,7 +2185,6 @@
       const pd = pads.find(x => x.id === padOpen);
       if (!pd) { padOpen = null; return renderImp(); }
       h = `<div class="ed-bar"><button class="nb" data-pa="back">‹ 返回</button><span class="grow"></span>
-          <button class="nb" data-pa="copy">複製全文</button><button class="nb danger" data-pa="del">刪除</button>
           <button class="btn okb" data-pa="done" style="padding:5px 10px">${OKSVG}完成</button></div>
         <input class="ed-title" id="padTitle" placeholder="標題" value="${esc(pd.title)}" maxlength="60">
         <textarea class="ed-body" id="padBody" placeholder="在這裡自由書寫…">${esc(pd.body)}</textarea>
@@ -2050,20 +2192,16 @@
     } else {
       const c = cats.find(c => c.id === impCat), list0 = items.filter(i => i.cat === c.id), plist = pads.filter(i => i.cat === c.id).sort((a, b) => b.u - a.u);
       const list = list0.filter(i => i.pin).concat(list0.filter(i => !i.pin));
-      h = `<div class="cat-head">${impRename
-          ? `<input class="field" id="catNameIn" value="${esc(c.name)}" maxlength="20"><button class="btn okb" data-ca="rename-save" style="padding:5px 10px">${OKSVG}</button>`
-          : `<b>${esc(c.name)}</b><button class="nb" data-ca="rename">重新命名</button><button class="nb danger" data-ca="del">刪除分類</button>`}</div>
+      h = `${impRename ? `<div class="cat-head"><input class="field" id="catNameIn" value="${esc(c.name)}" maxlength="20"><button class="btn okb" data-ca="rename-save" style="padding:5px 10px">${OKSVG}</button></div>` : ''}
         <div class="subtabs"><button class="${impView === 'list' ? 'on' : ''}" data-view="list">📋 條列事項（${list.length}）</button><button class="${impView === 'pad' ? 'on' : ''}" data-view="pad">📝 記事本（${plist.length}）</button></div>`;
       if (impView === 'list') {
         h += list.length ? `<div class="pad">${list.map((it, i) => impEdit === it.id
             ? `<div class="prow" data-iid="${it.id}"><span class="pn">${i + 1}</span><span class="edcol"><textarea class="field pin2" rows="${Math.min(6, it.t.split('\n').length + 1)}">${esc(it.t)}</textarea><button class="nb" data-ia="red" title="先選取文字再按，標成重點紅字">標紅字</button></span><button class="okbtn" data-ia="save" title="編輯完成（Enter；Shift+Enter 換行）">${OKSVG}</button><button class="ni" data-ia="cancel" title="取消">×</button></div>`
-            : `<div class="prow${it.pin ? ' pinned' : ''}" data-iid="${it.id}"><span class="pn">${i + 1}</span><span class="pt" title="雙擊編輯">${it.pin ? '<span class="pinb">釘選</span>' : ''}${redHtml(it.t)}</span>
-                <span class="acts"><button class="ni" data-ia="copy" title="複製">${ICO.copy}</button><button class="ni${it.pin ? ' on' : ''}" data-ia="pin" title="${it.pin ? '取消釘選' : '釘選到最上方'}">📌</button><button class="ni" data-ia="edit" title="編輯">${ICO.edit}</button><button class="ni danger" data-ia="del" title="刪除">×</button></span></div>`).join('')}</div>`
+            : `<div class="prow${it.pin ? ' pinned' : ''}" data-iid="${it.id}"><span class="pn">${i + 1}</span><span class="pt" title="點一下複製・雙擊編輯・右鍵更多操作">${it.pin ? '<span class="pinb">釘選</span>' : ''}${redHtml(it.t)}</span></div>`).join('')}</div>`
           : `<div class="imp-empty">這個分類還沒有條列事項，從下方逐條新增。</div>`;
         h += `<div class="nadd" style="margin-top:8px"><input class="field" id="impNew" placeholder="新增一條注意事項，按 Enter 加入" autocomplete="off"><button class="nb primary" data-ia="add">新增</button></div>`;
-        if (list.length > 1) h += `<div class="note-actions"><button class="nb" data-ia="copyall">全部複製</button></div>`;
       } else {
-        h += plist.length ? `<div class="padlist">${plist.map(pd => `<button class="padcard" data-pad="${pd.id}"><b>${esc(pd.title || '（未命名）')}</b>
+        h += plist.length ? `<div class="padlist">${plist.map(pd => `<button class="padcard" data-pad="${pd.id}" title="右鍵更多操作"><b>${esc(pd.title || '（未命名）')}</b>
             <span>${esc((pd.body || '').split('\n').find(l => l.trim()) || '空白記事')}</span><small>${dt(pd.u)}</small></button>`).join('')}</div>`
           : `<div class="imp-empty">還沒有記事。<br>記事本可以自由寫長篇內容，像一般記事本一樣。</div>`;
         h += `<button class="newpad" data-pa="new">＋ 新增記事</button>`;
@@ -2077,6 +2215,14 @@
     name = name.trim(); if (!name) { impNewCat = false; return renderImp(); }
     const c = { id: uid(), name, u: now() };
     state.imp.cats.push(c); impCat = c.id; impNewCat = false; padOpen = null; save(); renderImp(); if (impView === 'list') focusIn('#impNew');
+  }
+  function padCopy(pd) { if (padOpen === pd.id) savePad(false); copyText((pd.title ? pd.title + '\n\n' : '') + pd.body).then(ok => toast(ok ? '📋 已複製全文' : '無法複製', '', 2000)); }
+  function padDel(pd) {
+    if (padOpen === pd.id) savePad(false);
+    showModal(`<h3>確定刪除這篇記事？</h3><div class="confirm-item">${esc(pd.title || '（未命名）')}<small>${esc((pd.body || '').slice(0, 60))}</small></div>
+      <div class="desc">刪除後就無法復原。</div>
+      <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn danger" id="padDelOk">🗑️ 刪除</button></div>`);
+    $('#padDelOk').onclick = () => { state.deleted[pd.id] = now(); state.imp.pads = state.imp.pads.filter(x => x !== pd); if (padOpen === pd.id) padOpen = null; save(); closeModal(); renderImp(); toast('已刪除記事', pd.title, 2000); };
   }
   // 記事本自動儲存
   function savePad(final) {
@@ -2122,14 +2268,6 @@
       const a = pa.dataset.pa, pd = state.imp.pads.find(x => x.id === padOpen);
       if (a === 'new') { const n = { id: uid(), cat: impCat, title: '', body: '', u: now() }; state.imp.pads.push(n); padOpen = n.id; save(); renderImp(); $('#padTitle').focus(); }
       if (a === 'back' || a === 'done') { savePad(true); padOpen = null; renderImp(); if (a === 'done') toast('✅ 記事已儲存', '', 1800); }
-      if (a === 'copy' && pd) { savePad(false); copyText((pd.title ? pd.title + '\n\n' : '') + pd.body).then(ok => toast(ok ? '📋 已複製全文' : '無法複製', '', 2000)); }
-      if (a === 'del' && pd) {
-        savePad(false);
-        showModal(`<h3>確定刪除這篇記事？</h3><div class="confirm-item">${esc(pd.title || '（未命名）')}<small>${esc((pd.body || '').slice(0, 60))}</small></div>
-          <div class="desc">刪除後就無法復原。</div>
-          <div class="row-end"><button class="btn ghost" data-close>取消</button><button class="btn danger" id="padDelOk">🗑️ 刪除</button></div>`);
-        $('#padDelOk').onclick = () => { state.deleted[pd.id] = now(); state.imp.pads = state.imp.pads.filter(x => x !== pd); padOpen = null; save(); closeModal(); renderImp(); toast('已刪除記事', pd.title, 2000); };
-      }
       return;
     }
     const ca = t.closest('[data-ca]');
@@ -2152,6 +2290,8 @@
       }
       return;
     }
+    const ptEl = t.closest('.prow[data-iid] .pt');
+    if (ptEl && !t.closest('[data-ia]')) { const it0 = state.imp.items.find(i => i.id === ptEl.closest('.prow').dataset.iid); if (it0) clickCopy(plainRed(it0.t)); return; }
     const ia = t.closest('[data-ia]'); if (!ia) return;
     const a = ia.dataset.ia, row = ia.closest('.prow'), it = row ? state.imp.items.find(i => i.id === row.dataset.iid) : null;
     const list = state.imp.items.filter(i => i.cat === impCat);
