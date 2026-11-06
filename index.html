@@ -94,6 +94,14 @@
   .hol-info b{color:var(--hol);font-weight:600}
   .hol-day{font-size:12px;margin:-4px 2px 8px;padding:6px 9px;border-radius:8px;background:color-mix(in srgb,var(--hol) 11%,var(--card));color:color-mix(in srgb,var(--hol) 85%,var(--ink))}
   .hol-day.work{background:var(--soft);color:var(--muted)}
+  .must-sec{margin-top:14px}
+  .must-sec h2{font-size:14px}
+  #planMust .item{border-style:dashed;border-left-style:solid}
+  #planMust .text{cursor:pointer}
+  #planMust .text:hover{color:var(--accent)}
+  .confirm-item{background:var(--soft);border-radius:8px;padding:9px 10px;margin:8px 0;font-size:14px;font-weight:600;word-break:break-word}
+  .confirm-item small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
+  .btn.okb{background:var(--ok);color:#fff;display:inline-flex;align-items:center;gap:5px}
   .sec-head{display:flex;align-items:center;gap:8px;margin:4px 2px 8px}
   .sec-head h2{margin:0;font-size:15px;flex:1}
   .sub{font-size:12px;color:var(--muted)}
@@ -441,6 +449,8 @@
       <div class="add-note hidden" id="taskNoteWrap"><ol class="nlist" id="taskNoteList"></ol>
         <div class="nadd" style="margin-top:4px"><input class="field" id="taskNote" placeholder="輸入一條備註，按 Enter 加入下一條" autocomplete="off"><button type="button" class="nb" id="taskNoteAdd">加入</button><button type="button" class="okbtn" id="taskNoteDone" title="備註編輯完成"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div></div>
       <ul class="list" id="taskList"></ul>
+      <div class="sec-head must-sec hidden" id="mustSecHead"><h2>📌 今天的必做事項</h2><span class="sub" id="mustSecCnt"></span></div>
+      <ul class="list" id="planMust"></ul>
     </section>
 
     <section id="tab-must" class="hidden">
@@ -1010,6 +1020,37 @@
         ${st ? `<span class="tag">${tagText[st]}</span>` : ''}
         ${starBtn(t)}${noteBtn(t)}<button class="del" title="刪除">×</button>${notePanel(t)}</li>`;
     }).join('') : `<li class="empty">這天還沒有安排，從上方新增吧</li>`;
+    renderPlanMust();
+  }
+  // 行程頁顯示今天還沒完成的必做事項（勾選完成後就不再顯示）
+  function renderPlanMust() {
+    const show = selDate === today;
+    const rows = [];
+    if (show) ALLP.forEach(([k, n]) => state.required[k].forEach(r => { if (isOpen(r, k)) rows.push([k, n, r]); }));
+    $('#mustSecHead').classList.toggle('hidden', !rows.length);
+    $('#mustSecCnt').textContent = rows.length ? `${rows.length} 項未完成` : '';
+    $('#planMust').innerHTML = rows.map(([k, n, r]) => {
+      const [st, tag] = reqStatus(r, k, false), meta = reqMeta(r, k);
+      return `<li class="item ${st}" data-id="${r.id}" data-p="${k}">
+        <input type="checkbox" class="chk" title="完成">
+        <span class="meta">${n}</span>
+        ${itemBody(r, meta)}
+        ${tag ? `<span class="tag">${tag}</span>` : ''}</li>`;
+    }).join('');
+  }
+  // 必做勾選完成前再確認一次
+  function confirmDone(r, p) {
+    const meta = reqMeta(r, p);
+    showModal(`<h3>確認完成？</h3>
+      <div class="confirm-item">${esc(r.text)}<small>${pName(p)}必做${meta ? '・' + esc(meta) : ''}</small></div>
+      <div class="desc">確定這件事已經完成了嗎？</div>
+      <div class="row-end"><button class="btn ghost" data-close>還沒，取消</button>
+        <button class="btn okb" id="confirmDoneBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>確定完成</button></div>`);
+    $('#confirmDoneBtn').onclick = () => {
+      state.reqDone[reqKey(r, p)] = now(); save(); closeModal(); renderAll();
+      toast('✅ 已完成', r.text, 2500);
+    };
+    setTimeout(() => $('#confirmDoneBtn') && $('#confirmDoneBtn').focus(), 0);
   }
 
   // ================= 繪製：必做 =================
@@ -1344,6 +1385,15 @@
     if (e.target.classList.contains('chk')) { t.done = e.target.checked; t.u = now(); save(); renderAll(); }
     if (e.target.classList.contains('del')) { state.deleted[t.id] = now(); state.tasks = state.tasks.filter(x => x !== t); save(); renderAll(); }
   });
+  $('#planMust').addEventListener('click', e => {
+    const li = e.target.closest('.item'); if (!li) return;
+    const k = li.dataset.p, r = state.required[k].find(x => x.id === li.dataset.id); if (!r) return;
+    if (e.target.classList.contains('chk')) { e.target.checked = false; confirmDone(r, k); return; }
+    if (e.target.closest('.text') || e.target.closest('[data-nt]')) {   // 點名稱跳到必做頁
+      $('#mainTabs [data-tab=must]').click(); must = k; renderMust();
+      setTimeout(() => { const el = document.querySelector(`#mustList .item[data-id="${r.id}"]`); if (el) el.scrollIntoView({ block: 'center' }); }, 30);
+    }
+  });
   $('#taskList').addEventListener('dblclick', e => {
     const li0 = e.target.closest('.item'); const t0 = li0 && state.tasks.find(x => x.id === li0.dataset.id);
     if (t0 && noteDbl(e, t0, renderDay)) return;
@@ -1441,7 +1491,10 @@
     const r = state.required[must].find(x => x.id === li.dataset.id); if (!r) return;
     if (starClick(e, r, renderMust)) return;
     if (noteClick(e, r, renderMust)) return;
-    if (e.target.classList.contains('chk')) { state.reqDone[reqKey(r, must)] = e.target.checked ? now() : -now(); save(); renderAll(); }
+    if (e.target.classList.contains('chk')) {
+      if (e.target.checked) { e.target.checked = false; confirmDone(r, must); }
+      else { state.reqDone[reqKey(r, must)] = -now(); save(); renderAll(); }
+    }
     if (e.target.classList.contains('del')) { state.deleted[r.id] = now(); state.required[must] = state.required[must].filter(x => x !== r); save(); renderAll(); }
   });
   $('#mustList').addEventListener('dblclick', e => {
