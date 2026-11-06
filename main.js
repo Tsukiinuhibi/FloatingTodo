@@ -163,14 +163,14 @@ async function sendBackupMail(text, isTest = false) {
   }
 }
 // 關閉或更新前執行：本機備份＋寄信（最多等 25 秒）
-async function runBackup() {
+async function runBackup({ mail = true } = {}) {
   const text = await getPayload();
   if (!text) return;
   const c = loadCfg();
   if (c.localBackup !== false) {
     try { writeLocalBackup(text); const n = loadCfg(); n.lastLocal = Date.now(); saveCfg(n); } catch (e) {}
   }
-  if (c.enabled) await Promise.race([sendBackupMail(text), new Promise(r => setTimeout(r, 25000))]);
+  if (mail && c.enabled) await Promise.race([sendBackupMail(text), new Promise(r => setTimeout(r, 25000))]);
 }
 
 // ---------- 繼承檔 ----------
@@ -257,7 +257,7 @@ ipcMain.on('update-download', () => autoUpdater && autoUpdater.downloadUpdate().
 ipcMain.on('update-install', async () => {
   if (!autoUpdater) return;
   if (win && !win.isDestroyed()) win.hide();
-  try { await runBackup(); } catch (e) {}
+  try { await runBackup({ mail: false }); } catch (e) {}     // 軟體更新：只存本機備份，不寄信
   allowClose = true;
   autoUpdater.quitAndInstall(false, true);
 });
