@@ -1,7 +1,7 @@
 {
   "name": "floating-todo",
   "productName": "FloatingTodo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "上班便利小工具：桌面代辦＋客服回覆文本",
   "author": "open900418",
   "main": "main.js",
