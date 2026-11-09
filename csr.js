@@ -325,15 +325,19 @@ function defaults(){
   ]};
 }
 /* 固定分類：不能刪除、可以改名。用 fixed 這個代號辨識（改名後仍認得）。 */
-const FIXED = [{ key: "work", name: "工作訊息回覆" }, { key: "safety", name: "職安注意事項" }];
+const FIXED = [{ key: "work", name: "工作訊息回覆" }, { key: "safety", name: "職安注意事項" }, { key: "report", name: "公司報告登入" }];
+// 這些固定分類的對話框裡可以加「小按鈕」（版面與操作相同）
+const SUB_CATS = ["safety", "report"];
+const hasSubs = c => !!(c && SUB_CATS.includes(c.fixed));
 function ensureFixed(d){
-  const add = [];
-  FIXED.forEach(f => {
+  FIXED.forEach((f, n) => {
     if (d.categories.some(c => c.fixed === f.key)) return;
     const same = d.categories.find(c => !c.fixed && c.name === f.name);
-    if (same) same.fixed = f.key; else add.push({ id: uid(), name: f.name, fixed: f.key, groups: [], items: [] });
+    if (same) { same.fixed = f.key; return; }
+    // 新的固定分類放在前一個固定分類後面（舊資料升級時不會跑到最上面）
+    const prev = FIXED.slice(0, n).map(x => d.categories.findIndex(c => c.fixed === x.key)).filter(i => i >= 0);
+    d.categories.splice(prev.length ? Math.max(...prev) + 1 : 0, 0, { id: uid(), name: f.name, fixed: f.key, groups: [], items: [] });
   });
-  d.categories.unshift(...add);
   return d;
 }
 function migrate(d){
@@ -438,7 +442,7 @@ function fromTxt(txt){
     else if ((m = /^--- 注意事項( 釘選)? ---\s*$/.exec(l))) { flush(); if (inNotes) { buf = []; pin = !!m[1]; } }
     else if ((m = /^=== (.*) ===\s*$/.exec(l))) { flush(); inNotes = false; last = null; cat = { id: uid(), name: m[1].trim() || "未命名分類", groups: [], items: [] }; cats.push(cat); }
     else if (buf && !buf.length && !inNotes && (m = /^::: 名稱 (.+?) :::\s*$/.exec(l))) ttl = m[1].trim();
-    else if (!buf && cat && (m = /^::: 固定 (work|safety) :::\s*$/.exec(l))) { if (!cats.some(x => x.fixed === m[1])) cat.fixed = m[1]; }
+    else if (!buf && cat && (m = /^::: 固定 (work|safety|report) :::\s*$/.exec(l))) { if (!cats.some(x => x.fixed === m[1])) cat.fixed = m[1]; }
     else if ((m = /^::: 群組 (.+?) :::\s*$/.exec(l))) { flush(); if (cat) getG(m[1].trim()); }
     else if ((m = /^--- 小按鈕 (.+?) ---\s*$/.exec(l))) { flush(); if (cat && last) { buf = []; sub = m[1].trim(); } }
     else if ((m = /^--- 對話框(?: @(.+?))? ---\s*$/.exec(l))) { flush(); if (cat) { buf = []; ttl = ""; grp = m[1] ? getG(m[1].trim()) : null; } }
@@ -579,7 +583,7 @@ function mkBtn(label, cls, fn){ const b = document.createElement("button"); b.ty
 function viewBubble(c, i){
   const el = document.createElement("article"); el.className = "bubble";
   const g = c.groups.find(x => x.id === i.group);
-  const safety = c.fixed === "safety";   // 「職安注意事項」專屬：事項裡可以加小按鈕
+  const safety = hasSubs(c);   // 「職安注意事項」「公司報告登入」：事項裡可以加小按鈕
   if (g || i.title) {
     const hd = h("div", null, "bhead");
     if (g) hd.append(h("div", g.name, "tag"));
